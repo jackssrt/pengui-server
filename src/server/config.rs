@@ -57,7 +57,7 @@ impl Config {
     }
     pub async fn parse(path: impl AsRef<Path>) -> Result<Self> {
         let data = tokio::fs::read(path.as_ref()).await?;
-        let data = serde_yaml_ng::from_slice::<Self>(&data)?;
+        let data = yaml_serde::from_slice::<Self>(&data)?;
 
         Ok(data)
     }
