@@ -1,7 +1,7 @@
 use crate::connection::Connection;
 use anyhow::Result;
 use axum::extract::ws::WebSocket;
-use std::{boxed::Box, sync::Arc};
+use std::boxed::Box;
 
 pub struct SessionClient {
     pub connection: Connection,

@@ -1,9 +1,4 @@
-use std::net::IpAddr;
-
-use crate::{
-    player::{ids::PlayerUuid, moderation_status::ModerationStatus, rank::Rank},
-    server::config::Config,
-};
+use crate::server::config::Config;
 use anyhow::Result;
 use sqlx::mysql::MySqlPool;
 

@@ -49,6 +49,7 @@ pub enum InnerCondition {
 }
 #[derive(Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+#[allow(clippy::struct_excessive_bools)]
 pub struct Badge {
     group: String,
     order: isize,

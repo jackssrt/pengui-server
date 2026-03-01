@@ -1,8 +1,4 @@
-use std::{
-    marker::PhantomData,
-    pin::Pin,
-    sync::{Arc, Mutex},
-};
+use std::{pin::Pin, sync::Arc};
 
 use anyhow::{Result, bail};
 use axum::extract::ws::{Message, WebSocket};
@@ -10,8 +6,7 @@ use futures_util::{
     SinkExt, StreamExt, TryStreamExt,
     stream::{SplitSink, SplitStream},
 };
-use tokio::{io::copy_buf, pin, sync::mpsc, task::AbortHandle};
-use tokio_stream::wrappers::ReceiverStream;
+use tokio::{sync::mpsc, task::AbortHandle};
 
 const DELIMITER: char = '\u{FFFF}';
 
@@ -34,12 +29,15 @@ impl Connection {
         let internal_outgoing_sender = outgoing_sender.clone();
         Self {
             incoming_abort_handle: tokio::spawn(async move {
-                Self::handle_incoming(stream, incoming_handler, internal_outgoing_sender).await;
+                // TODO fix error handling here
+                let _ =
+                    Self::handle_incoming(stream, incoming_handler, internal_outgoing_sender).await;
             })
             .abort_handle(),
 
             outgoing_abort_handle: tokio::spawn(async move {
-                Self::handle_outgoing(sink, outgoing_receiver);
+                // TODO fix error handling here
+                let _ = Self::handle_outgoing(sink, outgoing_receiver).await;
             })
             .abort_handle(),
             outgoing_sender,
@@ -61,20 +59,21 @@ impl Connection {
                     handler(parts).await
                 }
                 Message::Close(_) => {
-                    outgoing_sender.send(Message::Close(None)).await;
+                    outgoing_sender.send(Message::Close(None)).await?;
                     Ok(())
                 }
                 _ => Ok(()),
-            }?
+            }?;
         }
         Ok(())
     }
     pub async fn handle_outgoing(
         mut sink: SplitSink<WebSocket, Message>,
         mut receiver: mpsc::Receiver<Message>,
-    ) {
+    ) -> Result<()> {
         while let Some(value) = receiver.recv().await {
-            sink.send(value);
+            sink.send(value).await?;
         }
+        Ok(())
     }
 }

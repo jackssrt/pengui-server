@@ -51,7 +51,6 @@ pub struct Config {
     pub flags: Flags,
 }
 impl Config {
-    #[inline(always)]
     pub fn is_main_server(&self) -> bool {
         self.game_name == "2kki"
     }

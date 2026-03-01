@@ -17,7 +17,7 @@ pub struct AppState {
 }
 
 impl AppState {
-    pub async fn setup() -> Result<AppState> {
+    pub async fn setup() -> Result<Self> {
         // Args
         let args = Args::parse();
 
@@ -41,7 +41,7 @@ impl AppState {
         let parties = Parties::default();
 
         // State
-        Ok(AppState {
+        Ok(Self {
             args,
             config,
             database,

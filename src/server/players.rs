@@ -14,7 +14,7 @@ pub struct Players {
     pub ids_to_uuids: Mutex<Vec<Option<PlayerUuid>>>,
 }
 impl Players {
-    pub fn get_next_free_id(ids_to_uuids: &Vec<Option<PlayerUuid>>) -> PlayerId {
+    pub fn get_next_free_id(ids_to_uuids: &[Option<PlayerUuid>]) -> PlayerId {
         ids_to_uuids
             .iter()
             .enumerate()
@@ -28,7 +28,7 @@ impl Players {
     }
     pub fn insert_new(
         players: &mut HashMap<PlayerUuid, Arc<Player>>,
-        ids_to_uuids: &mut Vec<Option<PlayerUuid>>,
+        ids_to_uuids: &mut [Option<PlayerUuid>],
         player: Player,
     ) -> Arc<Player> {
         let player = Arc::new(player);

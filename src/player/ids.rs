@@ -1,5 +1,3 @@
-use std::sync::Arc;
-
 use rand::distr::{Alphanumeric, SampleString};
 use serde::Serialize;
 
