@@ -2,7 +2,7 @@
 run:
 	cargo run
 
-db:
+devdb:
 	echo IF THIS IS PRODUCTION PRESS CONTROL C NOWWWWW
 	docker compose down db --remove-orphans
 	# evil
