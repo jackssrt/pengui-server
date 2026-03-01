@@ -17,12 +17,12 @@ use crate::{
     session::client::SessionClient,
 };
 
+pub mod disconnected;
 pub mod friends;
 pub mod game_data;
 pub mod ids;
 pub mod medal;
 pub mod moderation_status;
-pub mod offline;
 pub mod privacy_settings;
 pub mod rank;
 
