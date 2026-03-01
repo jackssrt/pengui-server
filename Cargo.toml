@@ -1,0 +1,21 @@
+[package]
+name = "pengui-server"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+anyhow = "1.0.102"
+async-compression = { version = "0.4.40", features = ["tokio", "zstd"] }
+axum = { version = "0.8.8", features = ["macros", "ws"] }
+axum-extra = { version = "0.12.5", features = ["typed-header"] }
+chrono = { version = "0.4.44", features = ["serde"] }
+clap = { version = "4.5.60", features = ["derive"] }
+futures-util = { version = "0.3.32", default-features = false, features = ["sink", "std"] }
+rand = "0.10.0"
+serde = { version = "1.0.228", features = ["serde_derive"] }
+serde_yaml_ng = "0.10.0"
+sqlx = { version = "0.8.6", features = ["mysql", "runtime-tokio"] }
+strum = { version = "0.27.2", features = ["derive"] }
+tokio = { version = "1.49.0", features = ["full"] }
+tokio-stream = "0.1.18"
+walkdir = "2.5.0"
