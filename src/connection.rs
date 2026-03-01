@@ -23,7 +23,7 @@ pub struct Connection {
 impl Connection {
     pub fn new(
         socket: WebSocket,
-        incoming_handler: impl Fn(&[&str]) -> Pin<Box<dyn Future<Output = Result<()>> + Send>>
+        incoming_handler: impl Fn(Box<[String]>) -> Pin<Box<dyn Future<Output = Result<()>> + Send>>
         + Sync
         + Send
         + 'static,
@@ -47,7 +47,7 @@ impl Connection {
     }
     pub async fn handle_incoming(
         mut stream: SplitStream<WebSocket>,
-        handler: impl Fn(&[&str]) -> Pin<Box<dyn Future<Output = Result<()>> + Send>>
+        handler: impl Fn(Box<[String]>) -> Pin<Box<dyn Future<Output = Result<()>> + Send>>
         + Sync
         + Send
         + 'static,
@@ -57,8 +57,8 @@ impl Connection {
             match value {
                 Message::Binary(_) => bail!("unexpected binary message"),
                 Message::Text(x) => {
-                    let parts: Box<[&str]> = x.split(DELIMITER).collect();
-                    handler(&parts).await
+                    let parts: Box<[String]> = x.split(DELIMITER).map(ToOwned::to_owned).collect();
+                    handler(parts).await
                 }
                 Message::Close(_) => {
                     outgoing_sender.send(Message::Close(None)).await;

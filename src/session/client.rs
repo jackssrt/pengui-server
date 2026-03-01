@@ -9,10 +9,10 @@ pub struct SessionClient {
 impl SessionClient {
     pub fn new(socket: WebSocket) -> Self {
         Self {
-            connection: Connection::new(socket, |parts| Box::pin(Self::handle(parts.clone()))),
+            connection: Connection::new(socket, |parts| Box::pin(Self::handle(parts))),
         }
     }
-    pub async fn handle(parts: Vec<String>) -> Result<()> {
+    pub async fn handle(parts: Box<[String]>) -> Result<()> {
         Ok(())
     }
 }
