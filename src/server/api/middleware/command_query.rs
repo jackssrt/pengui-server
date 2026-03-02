@@ -9,7 +9,7 @@ struct CommandQuery {
     command: String,
 }
 
-pub fn rewrite_command_query<B>(mut req: Request<B>) -> Request<B> {
+pub async fn rewrite_command_query<B>(mut req: Request<B>) -> Request<B> {
     let query = Query::<CommandQuery>::try_from_uri(req.uri());
     if let Ok(Query(CommandQuery { command })) = query {
         let uri = req.uri_mut();
