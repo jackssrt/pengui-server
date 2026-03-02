@@ -1,0 +1,23 @@
+game_name: 2kki
+game_path: 2kki
+
+db_user: ynoserver
+db_pass: ynoserver
+db_addr: localhost:11306
+db_name: ynoserver
+
+sp_rooms:
+bad_sounds:
+pictures:
+picture_prefixes:
+battle_anim_ids:
+
+chat_webhook:
+screenshot_webhook:
+
+vapid_keys:
+    public: supersecurekey
+    private: supersecurekey
+
+flags:
+    unconsious: false

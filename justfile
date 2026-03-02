@@ -2,6 +2,9 @@
 run:
 	cargo run
 
+build:
+	cargo build --profile=release
+
 devdb:
 	echo IF THIS IS PRODUCTION PRESS CONTROL C NOWWWWW
 	docker compose down db --remove-orphans
