@@ -36,7 +36,7 @@ pub fn get_listener(config: &Config) -> Result<UnixListener> {
 async fn setup_router(state: Arc<AppState>) -> Result<()> {
     // listen
     let listener = get_listener(&state.config)?;
-    api::setup_router(state, listener);
+    api::setup_router(state, listener).await?;
 
     Ok(())
 }
