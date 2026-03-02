@@ -1,11 +1,9 @@
 use serde::Serialize;
 use strum::FromRepr;
 
-#[derive(FromRepr, Default)]
+#[derive(FromRepr)]
 #[repr(u8)]
 pub enum Medal {
-    #[default]
-    None,
     Bronze,
     Silver,
     Gold,
@@ -14,6 +12,5 @@ pub enum Medal {
 }
 
 // index with Medal
-
 #[derive(Default, Serialize)]
-pub struct Medals(pub [i32; 5]);
+pub struct Medals(pub [i8; 5]);

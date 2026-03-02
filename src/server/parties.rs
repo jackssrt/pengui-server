@@ -3,9 +3,9 @@ use std::{
     sync::{Arc, nonpoison::Mutex},
 };
 
-use crate::party::{Party, ids::PartyUuid};
+use crate::party::{Party, ids::PartyId};
 
 #[derive(Default)]
 pub struct Parties {
-    pub parties: Mutex<Arc<HashMap<PartyUuid, Party>>>,
+    pub parties: Mutex<Arc<HashMap<PartyId, Party>>>,
 }

@@ -3,7 +3,7 @@ use futures_util::TryStreamExt;
 use std::{collections::HashSet, net::IpAddr, sync::Arc};
 
 use crate::{
-    party::ids::PartyUuid,
+    party::ids::PartyId,
     player::{
         game_data::GameData,
         ids::{PlayerId, PlayerUuid},
@@ -41,7 +41,7 @@ pub struct Player {
     medals: Medals,
     privacy_settings: PrivacySettings,
     moderation_status: ModerationStatus,
-    party_id: Option<PartyUuid>,
+    party_id: Option<PartyId>,
     game_data: GameData,
 
     online_friends: HashSet<PlayerUuid>,
@@ -72,11 +72,11 @@ impl Player {
         ).fetch_optional(&state.database.pool).await? {
             uuid = PlayerUuid(query.uuid);
             name = Some(query.user);
-            rank = Rank::from_repr(query.rank).context("rank value out of range in db")?;
-            badge = query.badge;
+            rank = Rank::from_repr(query.rank.try_into().expect("rank value in db out of range")).expect("rank value in db out of range");
+            badge = Some(query.badge);
             moderation_status = ModerationStatus::from_ints(query.banned, query.muted);
-            medals = Medals([query.medalCountBronze, query.medalCountSilver, query.medalCountGold, query.medalCountPlatinum, query.medalCountDiamond]);
-            party_id = query.partyId.map(PartyUuid);
+            medals = Medals([query.medalCountBronze, query.medalCountSilver, query.medalCountGold, query.medalCountPlatinum, query.medalCountDiamond].map(|x| x.unwrap_or(0)));
+            party_id = query.partyId.map(PartyId);
             blocked_users = sqlx::query!("SELECT targetUuid FROM playerBlocks WHERE uuid = ?", uuid.0).fetch(&state.database.pool).map_ok(|x| PlayerUuid(x.targetUuid)).try_collect().await?;
         } else {
             name = None;
