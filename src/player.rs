@@ -85,7 +85,7 @@ impl Player {
             medals = Medals::default();
             party_id = None;
             // get moderation status for the ip
-            (uuid, moderation_status) = ModerationStatus::for_ip(state, ip).await?.unwrap_or_else(|| (PlayerUuid::new_random(), ModerationStatus::default()));
+            (uuid, moderation_status) = state.database.get_player_data_for_ip(&ip).await?.unwrap_or_else(|| (PlayerUuid::new_random(), ModerationStatus::default()));
             blocked_users = HashSet::default();
 
             // create the player data

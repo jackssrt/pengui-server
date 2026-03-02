@@ -1,13 +1,7 @@
-use std::net::IpAddr;
-
-use anyhow::Result;
-
-use crate::{player::ids::PlayerUuid, server::state::AppState};
-
-#[derive(Default)]
+#[derive(Default, strum::EnumIs)]
 pub enum ModerationStatus {
     #[default]
-    None,
+    Clear,
     Muted,
     Banned,
 }
@@ -16,21 +10,10 @@ impl ModerationStatus {
         match (is_banned, is_muted) {
             (true, ..) => Self::Banned,
             (.., true) => Self::Muted,
-            _ => Self::None,
+            _ => Self::Clear,
         }
     }
     pub const fn from_ints(banned: i8, muted: i8) -> Self {
         Self::from_booleans(banned != 0, muted != 0)
-    }
-    pub async fn for_ip(state: &AppState, ip: IpAddr) -> Result<Option<(PlayerUuid, Self)>> {
-        let query = sqlx::query!("SELECT uuid, banned, muted FROM players WHERE ip = ?", ip)
-            .fetch_optional(&state.database.pool)
-            .await?;
-        Ok(query.map(|query| {
-            (
-                PlayerUuid(query.uuid),
-                Self::from_ints(query.banned, query.muted),
-            )
-        }))
     }
 }

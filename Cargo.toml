@@ -17,5 +17,7 @@ sqlx = { version = "0.8.6", features = ["mysql", "runtime-tokio"] }
 strum = { version = "0.27.2", features = ["derive"] }
 tokio = { version = "1.49.0", features = ["full"] }
 tokio-stream = "0.1.18"
+tokio-util = { version = "0.7.18", features = ["io"] }
+tower = "0.5.3"
 walkdir = "2.5.0"
 yaml_serde = "0.10.3"

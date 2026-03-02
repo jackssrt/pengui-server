@@ -34,18 +34,15 @@ pub fn get_listener(config: &Config) -> Result<UnixListener> {
     Ok(listener)
 }
 async fn setup_router(state: Arc<AppState>) -> Result<()> {
-    let app = api::setup_router(&state);
-
     // listen
     let listener = get_listener(&state.config)?;
-    println!("Now serving requests.");
-    axum::serve(listener, app).await?;
+    api::setup_router(state, listener);
 
     Ok(())
 }
 
 pub async fn start() -> Result<()> {
-    println!("Now starting YNOServer...");
+    println!("Now starting pengui-server...");
     let state = Arc::new(AppState::setup().await?);
 
     init_history(&state);

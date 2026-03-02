@@ -12,7 +12,7 @@ use anyhow::Result;
 
 use crate::{
     player::Player,
-    server::{api::extractors::OptionalQueryToken, error::AppError, state::AppState},
+    server::{api::extractors::token::OptionalQueryToken, error::AppError, state::AppState},
     session::client::SessionClient,
 };
 

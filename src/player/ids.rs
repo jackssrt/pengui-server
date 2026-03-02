@@ -1,3 +1,5 @@
+use std::fmt::Display;
+
 use rand::distr::{Alphanumeric, SampleString};
 use serde::Serialize;
 
@@ -15,6 +17,11 @@ impl PlayerUuid {
 impl Default for PlayerUuid {
     fn default() -> Self {
         Self::new_random()
+    }
+}
+impl Display for PlayerUuid {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.0)
     }
 }
 #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Hash, Default, Serialize)]
