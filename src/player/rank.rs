@@ -7,5 +7,5 @@ pub enum Rank {
     #[default]
     User,
     Moderator,
-    Administrator,
+    Developer,
 }
