@@ -1,4 +1,4 @@
-use std::{os::unix::fs::PermissionsExt, path::PathBuf, sync::Arc};
+use std::{fs::create_dir, os::unix::fs::PermissionsExt, path::PathBuf, sync::Arc};
 
 use anyhow::Result;
 use tokio::net::UnixListener;
@@ -21,6 +21,11 @@ pub mod state;
 
 pub fn get_listener(config: &Config) -> Result<UnixListener> {
     let socket_path = PathBuf::from(format!("sockets/{}.sock", config.game_name));
+    // okay because socket path will always have a parent
+    // because we defined it
+    // throw away the Err, because it's most likely just because it already exists
+    #[allow(clippy::unwrap_used)]
+    let _ = create_dir(socket_path.parent().unwrap());
 
     // delete the old socket
     if std::fs::exists(&socket_path)? {
