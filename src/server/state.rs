@@ -31,7 +31,7 @@ impl AppState {
         let assets;
         {
             let config = Arc::clone(&config);
-            assets = Assets::new(config);
+            assets = Assets::new(config)?;
         }
 
         // Players

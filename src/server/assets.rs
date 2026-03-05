@@ -1,4 +1,5 @@
-use std::{collections::HashSet, path::Path, result::Result, sync::Arc};
+use anyhow::Result;
+use std::{collections::HashSet, path::Path, sync::Arc};
 use walkdir::WalkDir;
 
 use crate::{room::ids::MapId, server::config::Config};
@@ -14,36 +15,35 @@ pub struct Assets {
 }
 
 impl Assets {
-    pub fn new(config: Arc<Config>) -> Self {
-        let maps = Self::get_maps(config.as_ref());
-        let sprites = Self::get_sprites(config.as_ref());
-        let systems = Self::get_systems(config.as_ref());
+    pub fn new(config: Arc<Config>) -> Result<Self> {
+        let maps = Self::get_maps(config.as_ref())?;
+        let sprites = Self::get_sprites(config.as_ref())?;
+        let systems = Self::get_systems(config.as_ref())?;
         let sounds = Self::get_sounds(config.as_ref());
-        let pictures = Self::get_pictures(config.as_ref());
-        Self {
+        let pictures = Self::get_pictures(config.as_ref())?;
+        Ok(Self {
             config,
             maps,
             sprites,
             systems,
             sounds,
             pictures,
-        }
+        })
     }
-    fn get_maps(config: &Config) -> Vec<MapId> {
-        std::fs::read_dir(&config.game_path)
-            .unwrap()
+    fn get_maps(config: &Config) -> Result<Vec<MapId>> {
+        Ok(std::fs::read_dir(&config.game_path)?
             .filter_map(Result::ok)
             .map(|x| x.file_name())
             .filter_map(|x| Some(x.to_str()?.to_owned()))
             .filter(|x| x.len() == 11 && x[7..] == *".lmu")
             .filter_map(|x| x.parse().ok())
             .map(MapId)
-            .collect()
+            .collect())
     }
-    fn get_sprites(config: &Config) -> HashSet<String> {
+    fn get_sprites(config: &Config) -> Result<HashSet<String>> {
         get_stems("CharSet", &config.game_path)
     }
-    fn get_systems(config: &Config) -> HashSet<String> {
+    fn get_systems(config: &Config) -> Result<HashSet<String>> {
         get_stems("System", &config.game_path)
     }
     fn get_sounds(config: &Config) -> HashSet<String> {
@@ -51,7 +51,7 @@ impl Assets {
         WalkDir::new(path)
             .into_iter()
             .filter_map(Result::ok)
-            .filter(|x| !x.metadata().unwrap().is_dir())
+            .filter(|x| !x.metadata().is_ok_and(|x| x.is_dir()))
             .map(|x| x.path().with_extension(""))
             .filter_map(|x| {
                 Some([
@@ -62,7 +62,7 @@ impl Assets {
             .flatten()
             .collect()
     }
-    fn get_pictures(config: &Config) -> HashSet<String> {
+    fn get_pictures(config: &Config) -> Result<HashSet<String>> {
         get_stems("Picture", &config.game_path)
     }
     fn is_valid_sprite(&self, name: &str) -> bool {
@@ -107,12 +107,11 @@ impl Assets {
     }
 }
 
-fn get_stems(subdir: &str, game_path: &Path) -> HashSet<String> {
+fn get_stems(subdir: &str, game_path: &Path) -> Result<HashSet<String>> {
     let path = game_path.join(subdir);
-    std::fs::read_dir(path)
-        .unwrap()
+    Ok(std::fs::read_dir(path)?
         .filter_map(|x| x.ok().map(|x| x.path()))
         .filter_map(|x| x.file_stem().map(std::borrow::ToOwned::to_owned))
         .filter_map(|x| Some(x.to_str()?.to_owned()))
-        .collect()
+        .collect())
 }

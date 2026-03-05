@@ -1,5 +1,7 @@
 #![warn(clippy::pedantic)]
 #![warn(clippy::nursery)]
+#![warn(clippy::unwrap_used)]
+#![warn(clippy::expect_used)]
 #![allow(dead_code)]
 #![allow(unused_variables)]
 #![allow(clippy::unused_async)]
@@ -9,6 +11,7 @@
 #![feature(nonpoison_rwlock)]
 #![feature(nonpoison_mutex)]
 #![feature(duration_constructors)]
+#![feature(stmt_expr_attributes)]
 use anyhow::Result;
 
 use crate::server::start;

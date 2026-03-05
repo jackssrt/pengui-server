@@ -1,7 +1,4 @@
-use axum::{
-    extract::Query,
-    http::Request,
-};
+use axum::{extract::Query, http::Request};
 use serde::Deserialize;
 
 #[derive(Deserialize)]
@@ -18,6 +15,7 @@ pub async fn rewrite_command_query<B>(mut req: Request<B>) -> Request<B> {
             uri.path(),
             command,
             // already exists, the Query extractor checked it
+            #[allow(clippy::unwrap_used)]
             uri.query().unwrap()
         )
         .parse();
