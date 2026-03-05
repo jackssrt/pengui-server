@@ -33,9 +33,8 @@ where `{game_name}` is the game_name field of the config
 
 ### running
 
-1. `docker compose up db -d`
+1. `docker compose up -d`
 1. `just run`
-1. `just serve`
 
 ### useful commands
 
