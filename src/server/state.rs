@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use anyhow::Result;
+use anyhow::{Context, Result};
 use clap::Parser;
 
 use crate::server::{
@@ -22,16 +22,22 @@ impl AppState {
         let args = Args::parse();
 
         // Config
-        let config = Arc::new(Config::parse(&args.config).await?);
+        let config = Arc::new(
+            Config::parse(&args.config)
+                .await
+                .context("failed to read config")?,
+        );
 
         // Database
-        let database = Database::connect(&config).await?;
+        let database = Database::connect(&config)
+            .await
+            .context("failed to connect to database")?;
 
         // Assets
         let assets;
         {
             let config = Arc::clone(&config);
-            assets = Assets::new(config)?;
+            assets = Assets::new(config).context("failed to init assets")?;
         }
 
         // Players
