@@ -8,7 +8,7 @@ use axum::{
     routing::get,
 };
 use tokio::net::UnixListener;
-use tower::{Layer, ServiceBuilder};
+use tower::Layer;
 
 use crate::server::{
     api::{
@@ -36,15 +36,17 @@ pub async fn setup_router(state: Arc<AppState>, listener: UnixListener) -> Resul
         .route("/api/savesync/get", get(handle_savesync_get))
         .route("/api/savesync/timestamp", get(handle_savesync_timestamp))
         .route("/api/savesync/clear", get(handle_savesync_clear))
-        .route("/api/savesync/push", get(handle_savesync_push))
-        .route_layer(
-            ServiceBuilder::new()
-                .layer(from_fn_with_state(
-                    Arc::clone(&state),
-                    moderation_middleware,
-                ))
-                .layer(DefaultBodyLimit::max(8 * 1024 * 1024)), // 8 mb
-        );
+        .merge(
+            Router::new()
+                .route("/api/savesync/push", get(handle_savesync_push))
+                .route_layer(
+                    DefaultBodyLimit::max(8 * 1024 * 1024), // 8 mb
+                ),
+        )
+        .route_layer(from_fn_with_state(
+            Arc::clone(&state),
+            moderation_middleware,
+        ));
     let app = Router::new()
         .route("/session", get(handle_session))
         .route("/players", get(handle_players))
