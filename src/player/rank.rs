@@ -1,5 +1,5 @@
 use anyhow::{Result, anyhow};
-use serde::{Deserialize, Serialize};
+use serde_repr::{Deserialize_repr, Serialize_repr};
 use strum::FromRepr;
 
 use crate::{
@@ -7,7 +7,7 @@ use crate::{
     server::state::AppState,
 };
 
-#[derive(Deserialize, Serialize, FromRepr, PartialEq, Eq, PartialOrd, Ord, Default)]
+#[derive(Deserialize_repr, Serialize_repr, FromRepr, PartialEq, Eq, PartialOrd, Ord, Default)]
 #[repr(u8)]
 pub enum Rank {
     #[default]

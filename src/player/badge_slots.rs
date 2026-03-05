@@ -5,20 +5,12 @@ use crate::{player::traits::FetchForPlayerUuid, server::state::AppState};
 
 use super::ids::PlayerUuid;
 
-#[derive(PartialEq, Eq, Debug, Clone, Serialize)]
+#[derive(PartialEq, Eq, Debug, Clone, Serialize, Default)]
 pub struct BadgeSlots {
     #[serde(rename = "badgeSlotRows")]
     rows: i32,
     #[serde(rename = "badgeSlotCols")]
     columns: i32,
-}
-impl Default for BadgeSlots {
-    fn default() -> Self {
-        Self {
-            rows: 1,
-            columns: 3,
-        }
-    }
 }
 
 impl FetchForPlayerUuid for BadgeSlots {
@@ -27,12 +19,12 @@ impl FetchForPlayerUuid for BadgeSlots {
             "SELECT badgeSlotRows, badgeSlotCols FROM accounts WHERE uuid = ?",
             player_uuid.0
         )
-        .fetch_one(&state.database.pool)
+        .fetch_optional(&state.database.pool)
         .await?;
 
-        Ok(Self {
+        Ok(record.map_or_else(Self::default, |record| Self {
             rows: record.badgeSlotRows,
             columns: record.badgeSlotCols,
-        })
+        }))
     }
 }

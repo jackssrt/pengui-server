@@ -26,17 +26,19 @@ impl FetchForPlayerUuid for Medals {
         let query = sqlx::query!(
             "SELECT medalCountBronze, medalCountSilver, medalCountGold, medalCountPlatinum, medalCountDiamond FROM playerGameData WHERE uuid = ?",
             player_uuid.0
-        ).fetch_one(&state.database.pool).await?;
+        ).fetch_optional(&state.database.pool).await?;
 
-        Ok(Self(
-            ([
-                query.medalCountBronze,
-                query.medalCountSilver,
-                query.medalCountGold,
-                query.medalCountPlatinum,
-                query.medalCountDiamond,
-            ])
-            .map(|x| x.unwrap_or(0)),
-        ))
+        Ok(query.map_or_else(Self::default, |query| {
+            Self(
+                ([
+                    query.medalCountBronze,
+                    query.medalCountSilver,
+                    query.medalCountGold,
+                    query.medalCountPlatinum,
+                    query.medalCountDiamond,
+                ])
+                .map(|x| x.unwrap_or(0)),
+            )
+        }))
     }
 }
