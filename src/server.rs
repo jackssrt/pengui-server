@@ -23,7 +23,9 @@ pub fn get_listener(config: &Config) -> Result<UnixListener> {
     let socket_path = PathBuf::from(format!("sockets/{}.sock", config.game_name));
 
     // delete the old socket
-    std::fs::remove_file(&socket_path)?;
+    if std::fs::exists(&socket_path)? {
+        std::fs::remove_file(&socket_path)?;
+    }
 
     // bind the listener
     let listener = UnixListener::bind(&socket_path)?;
