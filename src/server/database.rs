@@ -13,7 +13,7 @@ pub struct Database {
 impl Database {
     pub async fn connect(config: &Config) -> Result<Self> {
         let url = &format!(
-            "mysql://{}:{}@{}/{}",
+            "mariadb://{}:{}@{}/{}",
             config.db_user, config.db_user, config.db_addr, config.db_name
         );
         Ok(Self {

@@ -3,7 +3,7 @@ game_path: 2kki
 
 db_user: ynoserver
 db_pass: ynoserver
-db_addr: localhost:11306
+db_addr: localhost:13306
 db_name: ynoserver
 
 sp_rooms:
