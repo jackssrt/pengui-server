@@ -7,7 +7,10 @@ use axum::{
     response::{IntoResponse, Response},
 };
 
-use crate::server::{api::extractors::token::AuthorizationToken, state::AppState};
+use crate::{
+    player::{ids::PlayerUuid, moderation_status::ModerationStatus, traits::FetchForPlayerUuid},
+    server::{api::extractors::token::AuthorizationToken, state::AppState},
+};
 
 #[axum::debug_middleware]
 pub async fn moderation_middleware(
@@ -16,12 +19,13 @@ pub async fn moderation_middleware(
     mut request: Request,
     next: Next,
 ) -> Result<Response, impl IntoResponse> {
-    let (uuid, moderation_status) = state
-        .database
-        .get_player_data_for_token(&token)
+    let uuid = PlayerUuid::fetch_for_token(&state, &token)
         .await
         .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, ""))?
         .ok_or((StatusCode::UNAUTHORIZED, ""))?;
+    let moderation_status = ModerationStatus::fetch_for_player_uuid(&state, &uuid)
+        .await
+        .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, ""))?;
     if moderation_status.is_banned() {
         return Err((StatusCode::UNAUTHORIZED, "user is banned"));
     }

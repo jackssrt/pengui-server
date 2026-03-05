@@ -1,9 +1,4 @@
-use std::net::IpAddr;
-
-use crate::{
-    player::{ids::PlayerUuid, moderation_status::ModerationStatus},
-    server::config::Config,
-};
+use crate::server::config::Config;
 use anyhow::Result;
 use sqlx::mysql::MySqlPool;
 
@@ -29,31 +24,5 @@ impl Database {
         .execute(&self.pool)
         .await?;
         Ok(())
-    }
-    pub async fn get_player_data_for_ip(
-        &self,
-        ip: &IpAddr,
-    ) -> Result<Option<(PlayerUuid, ModerationStatus)>> {
-        let query = sqlx::query!("SELECT uuid, banned, muted FROM players WHERE ip = ?", ip)
-            .fetch_optional(&self.pool)
-            .await?;
-        Ok(query.map(|query| {
-            (
-                PlayerUuid(query.uuid),
-                ModerationStatus::from_ints(query.banned, query.muted),
-            )
-        }))
-    }
-    pub async fn get_player_data_for_token(
-        &self,
-        token: &str,
-    ) -> Result<Option<(PlayerUuid, ModerationStatus)>> {
-        let query = sqlx::query!("SELECT p.uuid, p.banned, p.muted FROM players p JOIN playerSessions ps ON ps.uuid = p.uuid WHERE ps.sessionId = ? AND NOW() < ps.expiration", token).fetch_optional(&self.pool).await?;
-        Ok(query.map(|query| {
-            (
-                PlayerUuid(query.uuid),
-                ModerationStatus::from_ints(query.banned, query.muted),
-            )
-        }))
     }
 }
