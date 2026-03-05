@@ -1,3 +1,9 @@
+use crate::{
+    player::{ids::PlayerUuid, traits::FetchForPlayerUuid},
+    server::state::AppState,
+};
+use anyhow::Result;
+
 #[derive(Default, strum::EnumIs)]
 pub enum ModerationStatus {
     #[default]
@@ -15,5 +21,16 @@ impl ModerationStatus {
     }
     pub const fn from_ints(banned: i8, muted: i8) -> Self {
         Self::from_booleans(banned != 0, muted != 0)
+    }
+}
+impl FetchForPlayerUuid for ModerationStatus {
+    async fn fetch_for_player_uuid(state: &AppState, uuid: &PlayerUuid) -> Result<Self> {
+        Ok(
+            sqlx::query!("SELECT muted, banned FROM players WHERE uuid = ?", uuid.0)
+                .fetch_optional(&state.database.pool)
+                .await?
+                .map(|record| Self::from_ints(record.banned, record.muted))
+                .unwrap_or_default(),
+        )
     }
 }

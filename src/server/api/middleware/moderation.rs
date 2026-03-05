@@ -7,10 +7,7 @@ use axum::{
     response::{IntoResponse, Response},
 };
 
-use crate::{
-    player::moderation_status::ModerationStatus,
-    server::{api::extractors::token::AuthorizationToken, state::AppState},
-};
+use crate::server::{api::extractors::token::AuthorizationToken, state::AppState};
 
 #[axum::debug_middleware]
 pub async fn moderation_middleware(

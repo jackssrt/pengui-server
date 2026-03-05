@@ -4,6 +4,7 @@
 #![allow(unused_variables)]
 #![allow(clippy::unused_async)]
 #![allow(clippy::significant_drop_tightening)]
+#![deny(unused_must_use)]
 #![feature(sync_nonpoison)]
 #![feature(nonpoison_rwlock)]
 #![feature(nonpoison_mutex)]
@@ -13,6 +14,7 @@ use anyhow::Result;
 use crate::server::start;
 mod chat;
 mod connection;
+mod locations;
 mod party;
 mod player;
 mod room;

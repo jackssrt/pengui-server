@@ -1,5 +1,5 @@
 use axum::{
-    extract::{FromRequestParts, Query},
+    extract::Query,
     http::Request,
 };
 use serde::Deserialize;

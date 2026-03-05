@@ -1,22 +1,19 @@
-use core::fmt::Debug;
-use std::{os::fd::IntoRawFd, sync::Arc};
+use std::sync::Arc;
 
 use anyhow::Result;
 use axum::{
-    BoxError, Router, ServiceExt,
-    error_handling::{HandleError, HandleErrorLayer},
+    Router, ServiceExt,
     extract::DefaultBodyLimit,
-    http::{Request, StatusCode},
     middleware::{from_fn_with_state, map_request},
-    response::IntoResponse,
-    routing::{IntoMakeService, get},
-    serve::Listener,
+    routing::get,
 };
-use tower::{Layer, MakeService, Service, ServiceBuilder};
+use tokio::net::UnixListener;
+use tower::{Layer, ServiceBuilder};
 
 use crate::server::{
     api::{
         middleware::{command_query::rewrite_command_query, moderation::moderation_middleware},
+        player_info::handle_player_info,
         players::handle_players,
         save_sync::{
             handle_savesync_clear, handle_savesync_get, handle_savesync_push,
@@ -29,15 +26,12 @@ use crate::server::{
 
 mod extractors;
 mod middleware;
+mod player_info;
 mod players;
 mod save_sync;
 mod session;
 
-pub async fn setup_router<L>(state: Arc<AppState>, listener: L) -> Result<()>
-where
-    L: Listener,
-    L::Addr: Debug,
-{
+pub async fn setup_router(state: Arc<AppState>, listener: UnixListener) -> Result<()> {
     let authenticated = Router::new()
         .route("/api/savesync/get", get(handle_savesync_get))
         .route("/api/savesync/timestamp", get(handle_savesync_timestamp))
@@ -54,6 +48,7 @@ where
     let app = Router::new()
         .route("/session", get(handle_session))
         .route("/players", get(handle_players))
+        .route("/api/info", get(handle_player_info))
         .merge(authenticated)
         .with_state(state);
     let app = map_request(rewrite_command_query).layer(app);

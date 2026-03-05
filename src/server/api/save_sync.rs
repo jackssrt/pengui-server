@@ -1,15 +1,10 @@
-use anyhow::anyhow;
-use async_compression::tokio::bufread::ZstdDecoder;
 use axum::{
     Extension,
     body::Body,
-    extract::{Query, Request},
+    extract::Request,
     response::{IntoResponse, Response},
 };
-use chrono::{DateTime, NaiveDateTime, Utc};
 use futures_util::TryStreamExt;
-use serde::Deserialize;
-use tokio::{fs::File, io::BufReader};
 use tokio_util::io::{ReaderStream, StreamReader};
 
 use std::sync::Arc;

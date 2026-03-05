@@ -1,4 +1,4 @@
-use std::{path::PathBuf, time::SystemTime};
+use std::path::PathBuf;
 
 use anyhow::Result;
 use async_compression::tokio::{bufread::ZstdDecoder, write::ZstdEncoder};
