@@ -37,7 +37,7 @@ pub async fn setup_router(state: Arc<AppState>, listener: UnixListener) -> Resul
         .route("/api/savesync/timestamp", get(handle_savesync_timestamp))
         .route("/api/savesync/clear", get(handle_savesync_clear))
         .route("/api/savesync/push", get(handle_savesync_push))
-        .layer(
+        .route_layer(
             ServiceBuilder::new()
                 .layer(from_fn_with_state(
                     Arc::clone(&state),
