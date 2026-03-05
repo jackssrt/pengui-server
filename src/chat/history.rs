@@ -46,7 +46,6 @@ pub fn init_history(state: &AppState) {
         return;
     }
     // TODO: schedule deleting old messages
-    todo!()
 }
 
 pub async fn delete_old_chat_messages(database: &Database) -> Result<()> {
