@@ -17,7 +17,9 @@ use crate::{
         traits::{FetchForPlayerUuid, MaybeFetchForPlayerUuid},
     },
     server::{
-        api::extractors::token::OptionalAuthorizationToken, error::AppError, state::AppState,
+        api::extractors::authentication::OptionalHeaderAuthentication,
+        error::AppError,
+        state::AppState,
     },
 };
 
@@ -40,11 +42,11 @@ async fn helper(state: &AppState, token: Option<&str>) {}
 #[axum::debug_handler]
 pub async fn handle_player_info(
     State(state): State<Arc<AppState>>,
-    OptionalAuthorizationToken(token): OptionalAuthorizationToken,
+    OptionalHeaderAuthentication(auth): OptionalHeaderAuthentication,
     RightmostXForwardedFor(ip): RightmostXForwardedFor,
 ) -> Result<Json<PlayerInfo>, AppError> {
-    let (is_authenticated, uuid) =
-        PlayerUuid::fetch_for_token_or_ip(&state, token.as_deref(), &ip).await?;
+    let is_authenticated = auth.is_authenticated();
+    let uuid = auth.take_uuid();
     Ok(PlayerInfo {
         name: PlayerName::fetch_for_player_uuid(&state, &uuid)
             .await?

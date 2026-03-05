@@ -64,11 +64,11 @@ impl Player {
     pub async fn new(
         state: &AppState,
         session_client: SessionClient,
+        is_authenticated: bool,
+        uuid: PlayerUuid,
         ip: IpAddr,
-        token: Option<&str>,
     ) -> Result<Arc<Self>> {
         // all this data is fetched here to avoid locking the players and ids_to_uuids mutexes for too long
-        let (is_authenticated, uuid) = PlayerUuid::fetch_for_token_or_ip(state, token, &ip).await?;
         let name = PlayerName::fetch_for_player_uuid(state, &uuid).await?;
         let rank = Rank::fetch_for_player_uuid(state, &uuid).await?;
         let badge = BadgeName::fetch_for_player_uuid(state, &uuid).await?;

@@ -1,7 +1,6 @@
 use std::{fmt::Display, net::IpAddr};
 
 use anyhow::Result;
-use futures_util::future::OptionFuture;
 use rand::distr::{Alphanumeric, SampleString};
 use serde::Serialize;
 
@@ -49,22 +48,6 @@ impl PlayerUuid {
             .await?;
             uuid
         })
-    }
-    pub async fn fetch_for_token_or_ip(
-        state: &AppState,
-        token: Option<&str>,
-        ip: &IpAddr,
-    ) -> Result<(bool, Self)> {
-        Ok(
-            match OptionFuture::from(token.map(|token| Self::fetch_for_token(state, token)))
-                .await
-                .transpose()?
-                .flatten()
-            {
-                Some(uuid) => (true, uuid),
-                None => (false, Self::fetch_for_ip(state, ip).await?),
-            },
-        )
     }
 }
 impl Default for PlayerUuid {

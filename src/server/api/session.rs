@@ -12,7 +12,13 @@ use anyhow::Result;
 
 use crate::{
     player::Player,
-    server::{api::extractors::token::OptionalQueryToken, error::AppError, state::AppState},
+    server::{
+        api::extractors::authentication::{
+            OptionalAuthentication, OptionalQueryAuthentication,
+        },
+        error::AppError,
+        state::AppState,
+    },
     session::client::SessionClient,
 };
 
@@ -21,12 +27,12 @@ pub async fn handle_session(
     State(state): State<Arc<AppState>>,
     ws: WebSocketUpgrade,
     ConnectInfo(socket_addr): ConnectInfo<SocketAddr>,
-    OptionalQueryToken(token): OptionalQueryToken,
+    OptionalQueryAuthentication(auth): OptionalQueryAuthentication,
 ) -> Result<Response, AppError> {
     let ip = socket_addr.ip();
 
     Ok(ws.on_upgrade(async move |socket| {
-        if let Err(e) = handle_session_websocket(socket, state, ip, token.as_deref()).await {
+        if let Err(e) = handle_session_websocket(socket, state, auth, ip).await {
             eprintln!("session handler error {e:?}");
         }
     }))
@@ -35,9 +41,16 @@ pub async fn handle_session(
 async fn handle_session_websocket(
     socket: WebSocket,
     state: Arc<AppState>,
+    auth: OptionalAuthentication,
     ip: IpAddr,
-    token: Option<&str>,
 ) -> Result<()> {
-    let player = Player::new(&state, SessionClient::new(socket), ip, token).await?;
+    let player = Player::new(
+        &state,
+        SessionClient::new(socket),
+        auth.is_authenticated(),
+        auth.take_uuid(),
+        ip,
+    )
+    .await?;
     Ok(())
 }
