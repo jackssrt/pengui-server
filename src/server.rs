@@ -16,6 +16,7 @@ pub mod database;
 pub mod error;
 pub mod parties;
 pub mod players;
+pub mod rooms;
 pub mod saves;
 pub mod state;
 

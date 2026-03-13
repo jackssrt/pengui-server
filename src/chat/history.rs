@@ -27,8 +27,8 @@ pub struct ChatMessage {
     pub previous_map_id: String,
     #[serde(rename = "prevLocations")]
     pub previous_locations: String,
-    pub x: i16,
-    pub y: i16,
+    pub x: u16,
+    pub y: u16,
     pub contents: String,
     pub timestamp: String,
     #[serde(rename = "party")]

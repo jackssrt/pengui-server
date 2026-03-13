@@ -5,7 +5,7 @@ use clap::Parser;
 
 use crate::server::{
     args::Args, assets::Assets, config::Config, database::Database, parties::Parties,
-    players::Players,
+    players::Players, rooms::Rooms,
 };
 pub struct AppState {
     pub args: Args,
@@ -14,6 +14,7 @@ pub struct AppState {
     pub assets: Assets,
     pub players: Players,
     pub parties: Parties,
+    pub rooms: Rooms,
 }
 
 impl AppState {
@@ -40,20 +41,15 @@ impl AppState {
             assets = Assets::new(config).context("failed to init assets")?;
         }
 
-        // Players
-        let players = Players::default();
-
-        // Parties
-        let parties = Parties::default();
-
         // State
         Ok(Self {
             args,
             config,
             database,
             assets,
-            players,
-            parties,
+            players: Players::default(),
+            parties: Parties::default(),
+            rooms: Rooms::default(),
         })
     }
 }

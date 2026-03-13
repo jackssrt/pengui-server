@@ -1,0 +1,229 @@
+use serde::{Serialize, Serializer, ser::Impossible};
+
+use crate::room::client::packet::error::PacketError;
+
+#[derive(Clone)]
+pub struct PacketSerializer {
+    pub delimiter: &'static [u8],
+    parts: Vec<Vec<u8>>,
+}
+impl PacketSerializer {
+    pub const fn new(delimiter: &'static [u8]) -> Self {
+        Self {
+            delimiter,
+            parts: Vec::new(),
+        }
+    }
+}
+macro_rules! impl_number {
+    ($name: ident, $type: ty) => {
+        fn $name(self, v: $type) -> Result<Self::Ok, Self::Error> {
+            Ok(v.to_string().into_bytes())
+        }
+    };
+}
+macro_rules! impl_sub_serializer {
+    ($fn: ident, $trait: path) => {
+        impl $trait for PacketSerializer {
+            type Ok = Vec<u8>;
+
+            type Error = PacketError;
+            fn $fn<T>(&mut self, value: &T) -> Result<(), Self::Error>
+            where
+                T: ?Sized + Serialize,
+            {
+                let part = value.serialize(self.clone())?;
+                Ok(self.parts.push(part))
+            }
+            fn end(self) -> Result<Self::Ok, Self::Error> {
+                Ok(bstr::join(self.delimiter, self.parts))
+            }
+        }
+    };
+}
+impl_sub_serializer!(serialize_field, serde::ser::SerializeTupleStruct);
+impl_sub_serializer!(serialize_element, serde::ser::SerializeSeq);
+impl_sub_serializer!(serialize_element, serde::ser::SerializeTuple);
+impl_sub_serializer!(serialize_field, serde::ser::SerializeTupleVariant);
+
+impl serde::ser::SerializeStructVariant for PacketSerializer {
+    type Ok = Vec<u8>;
+
+    type Error = PacketError;
+    fn serialize_field<T>(&mut self, key: &'static str, value: &T) -> Result<(), Self::Error>
+    where
+        T: ?Sized + Serialize,
+    {
+        let part = value.serialize(self.clone())?;
+        self.parts.push(part);
+        Ok(())
+    }
+    fn end(self) -> Result<Self::Ok, Self::Error> {
+        Ok(bstr::join(self.delimiter, self.parts))
+    }
+}
+pub struct PacketTupleSerializer {}
+pub struct PacketTupleStructSerializer {}
+impl Serializer for PacketSerializer {
+    type Ok = Vec<u8>;
+
+    type Error = PacketError;
+
+    type SerializeSeq = Self;
+
+    type SerializeTuple = Self;
+
+    type SerializeTupleStruct = Self;
+
+    type SerializeTupleVariant = Self;
+
+    type SerializeMap = Impossible<Self::Ok, Self::Error>;
+
+    type SerializeStruct = Impossible<Self::Ok, Self::Error>;
+
+    type SerializeStructVariant = Self;
+
+    impl_number!(serialize_u8, u8);
+    impl_number!(serialize_u16, u16);
+    impl_number!(serialize_u32, u32);
+    impl_number!(serialize_u64, u64);
+    impl_number!(serialize_u128, u128);
+    impl_number!(serialize_i8, i8);
+    impl_number!(serialize_i16, i16);
+    impl_number!(serialize_i32, i32);
+    impl_number!(serialize_i64, i64);
+    impl_number!(serialize_i128, i128);
+    impl_number!(serialize_f32, f32);
+    impl_number!(serialize_f64, f64);
+
+    fn serialize_bool(self, v: bool) -> Result<Self::Ok, Self::Error> {
+        Ok(if v { b"1".to_vec() } else { b"0".to_vec() })
+    }
+
+    fn serialize_str(self, v: &str) -> Result<Self::Ok, Self::Error> {
+        Ok(v.as_bytes().to_vec())
+    }
+    fn serialize_char(self, v: char) -> Result<Self::Ok, Self::Error> {
+        let mut buf = [0u8; 4];
+        self.serialize_str(v.encode_utf8(&mut buf))
+    }
+
+    fn serialize_bytes(self, v: &[u8]) -> Result<Self::Ok, Self::Error> {
+        Ok(v.to_owned())
+    }
+
+    fn serialize_none(self) -> Result<Self::Ok, Self::Error> {
+        Ok(b"null".to_vec())
+    }
+
+    fn serialize_some<T>(self, value: &T) -> Result<Self::Ok, Self::Error>
+    where
+        T: ?Sized + Serialize,
+    {
+        value.serialize(self)
+    }
+
+    fn serialize_unit(self) -> Result<Self::Ok, Self::Error> {
+        Ok(vec![])
+    }
+
+    fn serialize_unit_struct(self, name: &'static str) -> Result<Self::Ok, Self::Error> {
+        Ok(vec![])
+    }
+
+    fn serialize_unit_variant(
+        self,
+        name: &'static str,
+        variant_index: u32,
+        variant: &'static str,
+    ) -> Result<Self::Ok, Self::Error> {
+        Ok(variant.bytes().collect())
+    }
+
+    fn serialize_newtype_struct<T>(
+        self,
+        name: &'static str,
+        value: &T,
+    ) -> Result<Self::Ok, Self::Error>
+    where
+        T: ?Sized + Serialize,
+    {
+        value.serialize(self)
+    }
+
+    fn serialize_newtype_variant<T>(
+        self,
+        name: &'static str,
+        variant_index: u32,
+        variant: &'static str,
+        value: &T,
+    ) -> Result<Self::Ok, Self::Error>
+    where
+        T: ?Sized + Serialize,
+    {
+        let delim = self.delimiter;
+        Ok([variant.bytes().collect(), value.serialize(self)?].join(delim))
+    }
+
+    fn serialize_tuple(self, len: usize) -> Result<Self::SerializeTuple, Self::Error> {
+        Ok(Self::SerializeTuple {
+            delimiter: self.delimiter,
+            parts: Vec::with_capacity(len),
+        })
+    }
+
+    fn serialize_tuple_struct(
+        self,
+        name: &'static str,
+        len: usize,
+    ) -> Result<Self::SerializeTupleStruct, Self::Error> {
+        Ok(Self::SerializeTupleStruct {
+            delimiter: self.delimiter,
+            parts: Vec::with_capacity(len),
+        })
+    }
+
+    fn serialize_map(self, len: Option<usize>) -> Result<Self::SerializeMap, Self::Error> {
+        unimplemented!()
+    }
+
+    fn serialize_struct(
+        self,
+        name: &'static str,
+        len: usize,
+    ) -> Result<Self::SerializeStruct, Self::Error> {
+        unimplemented!()
+    }
+
+    fn serialize_tuple_variant(
+        self,
+        name: &'static str,
+        variant_index: u32,
+        variant: &'static str,
+        len: usize,
+    ) -> Result<Self::SerializeTupleVariant, Self::Error> {
+        Ok(Self::SerializeTupleVariant {
+            delimiter: self.delimiter,
+            parts: Vec::with_capacity(len),
+        })
+    }
+    fn serialize_struct_variant(
+        self,
+        name: &'static str,
+        variant_index: u32,
+        variant: &'static str,
+        len: usize,
+    ) -> Result<Self::SerializeStructVariant, Self::Error> {
+        Ok(Self::SerializeStructVariant {
+            delimiter: self.delimiter,
+            parts: Vec::with_capacity(len),
+        })
+    }
+
+    fn serialize_seq(self, len: Option<usize>) -> Result<Self::SerializeSeq, Self::Error> {
+        Ok(Self::SerializeSeq {
+            delimiter: self.delimiter,
+            parts: len.map(Vec::with_capacity).unwrap_or_default(),
+        })
+    }
+}

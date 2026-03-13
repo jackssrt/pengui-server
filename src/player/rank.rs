@@ -7,7 +7,18 @@ use crate::{
     server::state::AppState,
 };
 
-#[derive(Deserialize_repr, Serialize_repr, FromRepr, PartialEq, Eq, PartialOrd, Ord, Default)]
+#[derive(
+    Deserialize_repr,
+    Serialize_repr,
+    FromRepr,
+    PartialEq,
+    Eq,
+    PartialOrd,
+    Ord,
+    Default,
+    Clone,
+    Debug,
+)]
 #[repr(u8)]
 pub enum Rank {
     #[default]

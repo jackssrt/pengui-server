@@ -9,6 +9,7 @@ a rust rewrite of [yno-server](https://github.com/ynoproject/ynoserver), aiming 
 these instructions can also be adapted to run the original go implementation, since that doesn't have any setup instructions
 
 1. start downloading the game you want to host
+1. generate a preshared key for the client and server and place it in `/key.bin`
 1. build with: `just build`
 1. look in `/target/release`, that's where the pengui-server executable is
 1. get an instance of mariadb initialized with `/sql/init.sql` or use your already existing ynoserver database
@@ -20,16 +21,15 @@ just leave them empty or with the bogus values from the development config
 1. run the produced executable
 1. use or create an nginx config that routes traffic to the created socket in `/socket/{game_name}.socket`  
 where `{game_name}` is the game_name field of the config
-1. when room sockets are implemented, you will have to generate a preshared key for the client and server and put it somewhere in a .bin file
 1. optional - accept docker and just start using that please
 
 ## development
 
 ### setup
 
-- symlink a copy of yume 2kki to `pengui-server/2kki`
-  - so the map (`*.lmu`) files are directly in `pengui-server/2kki/*.lmu`
-- when room sockets are implemented, you will have to grab the key.bin from the wasm binary (security through obscurity, the most secure of them all /s)
+- symlink a copy of yume 2kki to `/2kki`
+  - so the map (`*.lmu`) files are directly in `/2kki/*.lmu`
+- generate or grab the key.bin from the ynoengine wasm binary which your testing client(s) use and put it in `/key.bin`
 
 ### running
 

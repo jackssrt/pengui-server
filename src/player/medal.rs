@@ -18,7 +18,7 @@ pub enum Medal {
 }
 
 // index with Medal
-#[derive(Default, Serialize)]
+#[derive(Default, Serialize, Clone, Debug)]
 pub struct Medals(pub [i8; 5]);
 
 impl FetchForPlayerUuid for Medals {

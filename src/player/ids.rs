@@ -6,7 +6,7 @@ use serde::Serialize;
 
 use crate::server::state::AppState;
 
-#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Hash, Serialize)]
+#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Hash, Serialize, Debug)]
 #[repr(transparent)]
 pub struct PlayerUuid(pub String);
 impl PlayerUuid {
@@ -60,6 +60,6 @@ impl Display for PlayerUuid {
         write!(f, "{}", self.0)
     }
 }
-#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Hash, Default, Serialize)]
+#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Hash, Default, Serialize, Copy, Debug)]
 #[repr(transparent)]
 pub struct PlayerId(pub usize);

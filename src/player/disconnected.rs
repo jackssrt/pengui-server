@@ -25,8 +25,8 @@ pub struct DisconnectedPlayerExtraData {
     pub map_id: Option<MapId>,
     pub previous_map_id: Option<MapId>,
     pub previous_locations: Option<String>,
-    pub x: i16,
-    pub y: i16,
+    pub x: u16,
+    pub y: u16,
     pub online: bool,
     pub last_active: DateTime<Utc>,
 }

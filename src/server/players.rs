@@ -1,6 +1,9 @@
 use std::{
     collections::HashMap,
-    sync::{Arc, nonpoison::Mutex},
+    sync::{
+        Arc,
+        nonpoison::{Mutex, RwLock},
+    },
 };
 
 use crate::player::{
@@ -9,7 +12,7 @@ use crate::player::{
 };
 #[derive(Default)]
 pub struct Players {
-    pub players: Mutex<HashMap<PlayerUuid, Arc<Player>>>,
+    pub players: Mutex<HashMap<PlayerUuid, Arc<RwLock<Player>>>>,
     /// None for holes in vec
     pub ids_to_uuids: Mutex<Vec<Option<PlayerUuid>>>,
 }
@@ -27,20 +30,27 @@ impl Players {
             .unwrap_or(PlayerId(ids_to_uuids.len()))
     }
     pub fn insert_new(
-        players: &mut HashMap<PlayerUuid, Arc<Player>>,
-        ids_to_uuids: &mut [Option<PlayerUuid>],
+        players: &mut HashMap<PlayerUuid, Arc<RwLock<Player>>>,
+        ids_to_uuids: &mut Vec<Option<PlayerUuid>>,
         player: Player,
-    ) -> Arc<Player> {
-        let player = Arc::new(player);
-        players.insert(player.uuid.clone(), player.clone());
-        ids_to_uuids[player.id.0] = Some(player.uuid.clone());
-        player
+    ) -> Arc<RwLock<Player>> {
+        let uuid = player.uuid.clone();
+        let id = player.id.0;
+        let wrapped_player = Arc::new(RwLock::new(player));
+        players.insert(uuid.clone(), wrapped_player.clone());
+        if let Some(x) = ids_to_uuids.get_mut(id) {
+            *x = Some(uuid);
+        } else {
+            // vec is too short
+            ids_to_uuids.extend_one(Some(uuid));
+        }
+        wrapped_player
     }
-    pub fn get_by_uuid(&self, uuid: &PlayerUuid) -> Option<Arc<Player>> {
+    pub async fn get_by_uuid(&self, uuid: &PlayerUuid) -> Option<Arc<RwLock<Player>>> {
         let players = self.players.lock();
         players.get(uuid).cloned()
     }
-    pub fn get_by_id(&self, id: &PlayerId) -> Option<Arc<Player>> {
+    pub async fn get_by_id(&self, id: &PlayerId) -> Option<Arc<RwLock<Player>>> {
         let uuids = self.ids_to_uuids.lock();
         let uuid = uuids.get(id.0)?.as_ref()?;
         let players = self.players.lock();

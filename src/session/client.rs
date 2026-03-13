@@ -1,18 +1,28 @@
-use crate::connection::Connection;
-use anyhow::Result;
-use axum::extract::ws::WebSocket;
-use std::boxed::Box;
+use std::{io::Read, sync::Arc};
 
-pub struct SessionClient {
-    pub connection: Connection,
-}
+use anyhow::Result;
+use axum::extract::ws::{Message, WebSocket};
+use futures_util::{SinkExt, StreamExt};
+
+use crate::server::state::AppState;
+
+pub struct SessionClient {}
 impl SessionClient {
-    pub fn new(socket: WebSocket) -> Self {
-        Self {
-            connection: Connection::new(socket, |parts| Box::pin(Self::handle_incoming(parts))),
-        }
-    }
-    pub async fn handle_incoming(parts: Box<[String]>) -> Result<()> {
-        Ok(())
+    pub async fn new(state: Arc<AppState>, socket: WebSocket) -> Result<Self> {
+        let (mut sink, mut stream) = socket.split();
+        tokio::spawn(async move {
+            while let Some(Ok(Message::Text(text))) = stream.next().await {
+                tracing::trace!("TODO")
+            }
+        });
+        let state = state.clone();
+        tokio::spawn(async move {
+            sink.send(Message::Text(
+                format!("pc\u{ffff}{}", state.players.players.lock().len()).into(),
+            ))
+            .await
+            .unwrap();
+        });
+        Ok(Self {})
     }
 }

@@ -9,13 +9,12 @@ use axum::{
 };
 
 use anyhow::Result;
+use axum_client_ip::RightmostXForwardedFor;
 
 use crate::{
     player::Player,
     server::{
-        api::extractors::authentication::{
-            OptionalAuthentication, OptionalQueryAuthentication,
-        },
+        api::extractors::authentication::{OptionalAuthentication, OptionalQueryAuthentication},
         error::AppError,
         state::AppState,
     },
@@ -26,11 +25,9 @@ use crate::{
 pub async fn handle_session(
     State(state): State<Arc<AppState>>,
     ws: WebSocketUpgrade,
-    ConnectInfo(socket_addr): ConnectInfo<SocketAddr>,
     OptionalQueryAuthentication(auth): OptionalQueryAuthentication,
+    RightmostXForwardedFor(ip): RightmostXForwardedFor,
 ) -> Result<Response, AppError> {
-    let ip = socket_addr.ip();
-
     Ok(ws.on_upgrade(async move |socket| {
         if let Err(e) = handle_session_websocket(socket, state, auth, ip).await {
             eprintln!("session handler error {e:?}");
@@ -46,7 +43,7 @@ async fn handle_session_websocket(
 ) -> Result<()> {
     let player = Player::new(
         &state,
-        SessionClient::new(socket),
+        SessionClient::new(state.clone(), socket).await?,
         auth.is_authenticated(),
         auth.take_uuid(),
         ip,

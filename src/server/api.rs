@@ -1,20 +1,24 @@
-use std::sync::Arc;
+use std::{sync::Arc, time::Duration};
 
 use anyhow::Result;
 use axum::{
     Router, ServiceExt,
+    body::Bytes,
     extract::DefaultBodyLimit,
     middleware::{from_fn_with_state, map_request},
-    routing::get,
+    routing::{any, get},
 };
 use tokio::net::UnixListener;
 use tower::Layer;
+use tower_http::trace::TraceLayer;
+use tracing::Span;
 
 use crate::server::{
     api::{
         middleware::{command_query::rewrite_command_query, moderation::moderation_middleware},
         player_info::handle_player_info,
         players::handle_players,
+        room::handle_room,
         save_sync::{
             handle_savesync_clear, handle_savesync_get, handle_savesync_push,
             handle_savesync_timestamp,
@@ -28,6 +32,7 @@ mod extractors;
 mod middleware;
 mod player_info;
 mod players;
+mod room;
 mod save_sync;
 mod session;
 
@@ -48,10 +53,16 @@ pub async fn setup_router(state: Arc<AppState>, listener: UnixListener) -> Resul
             moderation_middleware,
         ));
     let app = Router::new()
-        .route("/session", get(handle_session))
+        .route("/session", any(handle_session))
+        .route("/room", any(handle_room))
         .route("/players", get(handle_players))
         .route("/api/info", get(handle_player_info))
         .merge(authenticated)
+        .layer(TraceLayer::new_for_http().on_body_chunk(
+            |chunk: &Bytes, latency: Duration, _span: &Span| {
+                tracing::debug!("sending {:?}", chunk);
+            },
+        ))
         .with_state(state);
     let app = map_request(rewrite_command_query).layer(app);
     println!("Now serving requests.");

@@ -1,17 +1,23 @@
 use anyhow::Result;
-use std::{collections::HashSet, path::Path, sync::Arc};
+use std::{
+    borrow::ToOwned,
+    collections::{BTreeSet, HashSet},
+    num::NonZeroU16,
+    path::Path,
+    sync::Arc,
+};
 use walkdir::WalkDir;
 
 use crate::{room::ids::MapId, server::config::Config};
 
 pub struct Assets {
     config: Arc<Config>,
-    maps: Vec<MapId>,
 
-    sprites: HashSet<String>,
-    systems: HashSet<String>,
-    sounds: HashSet<String>,
-    pictures: HashSet<String>,
+    pub maps: BTreeSet<MapId>,
+    pub sprites: HashSet<String>,
+    pub systems: HashSet<String>,
+    pub sounds: HashSet<String>,
+    pub pictures: HashSet<String>,
 }
 
 impl Assets {
@@ -30,13 +36,14 @@ impl Assets {
             pictures,
         })
     }
-    fn get_maps(config: &Config) -> Result<Vec<MapId>> {
+    fn get_maps(config: &Config) -> Result<BTreeSet<MapId>> {
         Ok(std::fs::read_dir(&config.game_path)?
             .filter_map(Result::ok)
             .map(|x| x.file_name())
-            .filter_map(|x| Some(x.to_str()?.to_owned()))
+            .filter_map(|x| x.to_str().map(ToOwned::to_owned))
             .filter(|x| x.len() == 11 && x[7..] == *".lmu")
-            .filter_map(|x| x.parse().ok())
+            .inspect(|x| tracing::debug!("{}", &x[3..7]))
+            .filter_map(|x| x[3..7].parse().ok())
             .map(MapId)
             .collect())
     }
@@ -65,14 +72,18 @@ impl Assets {
     fn get_pictures(config: &Config) -> Result<HashSet<String>> {
         get_stems("Picture", &config.game_path)
     }
-    fn is_valid_sprite(&self, name: &str) -> bool {
+    pub fn is_valid_map_id(&self, id: NonZeroU16) -> Option<MapId> {
+        let map_id = MapId(id);
+        self.maps.contains(&map_id).then_some(map_id)
+    }
+    pub fn is_valid_sprite(&self, name: &str) -> bool {
         match name {
             "" => true,
             x if x.contains('/') || x.contains('\\') => false,
             x => self.sprites.contains(x),
         }
     }
-    fn is_valid_system(&self, name: &String, ignore_single_quotes: bool) -> bool {
+    pub fn is_valid_system(&self, name: &String, ignore_single_quotes: bool) -> bool {
         let name = {
             if ignore_single_quotes {
                 &name.replace('\'', "")
@@ -82,14 +93,14 @@ impl Assets {
         };
         self.systems.contains(name)
     }
-    fn is_valid_sound(&self, name: &str) -> bool {
+    pub fn is_valid_sound(&self, name: &str) -> bool {
         match name {
             name if name.contains("../") || name.contains("..\\") => false,
             name if self.config.bad_sounds.contains(name) => false,
             name => self.sounds.contains(name),
         }
     }
-    fn is_valid_picture(&self, name: &String) -> bool {
+    pub fn is_valid_picture(&self, name: &String) -> bool {
         match name {
             name if name.contains('/') || name.contains('\\') => false,
             name if !self.pictures.contains(name) => false,
@@ -111,7 +122,7 @@ fn get_stems(subdir: &str, game_path: &Path) -> Result<HashSet<String>> {
     let path = game_path.join(subdir);
     Ok(std::fs::read_dir(path)?
         .filter_map(|x| x.ok().map(|x| x.path()))
-        .filter_map(|x| x.file_stem().map(std::borrow::ToOwned::to_owned))
+        .filter_map(|x| x.file_stem().map(ToOwned::to_owned))
         .filter_map(|x| Some(x.to_str()?.to_owned()))
         .collect())
 }

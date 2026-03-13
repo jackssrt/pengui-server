@@ -1,5 +1,9 @@
 use anyhow::{Result, bail};
-use std::{collections::HashSet, net::IpAddr, sync::Arc};
+use std::{
+    collections::HashSet,
+    net::IpAddr,
+    sync::{Arc, nonpoison::RwLock},
+};
 
 use crate::{
     party::ids::PartyId,
@@ -43,21 +47,21 @@ pub mod traits;
 pub struct Player {
     pub uuid: PlayerUuid,
     pub id: PlayerId,
-    name: Option<PlayerName>,
-    ip: IpAddr,
-    rank: Rank,
-    badge: Option<BadgeName>,
-    medals: Medals,
-    privacy_settings: PrivacySettings,
-    moderation_status: ModerationStatus,
-    party_id: Option<PartyId>,
-    game_data: GameData,
+    pub name: Option<PlayerName>,
+    pub ip: IpAddr,
+    pub rank: Rank,
+    pub badge: Option<BadgeName>,
+    pub medals: Medals,
+    pub privacy_settings: PrivacySettings,
+    pub moderation_status: ModerationStatus,
+    pub party_id: Option<PartyId>,
+    pub game_data: GameData,
 
-    online_friends: HashSet<PlayerUuid>,
-    blocked_users: BlockedUsers,
+    pub online_friends: HashSet<PlayerUuid>,
+    pub blocked_users: BlockedUsers,
     // sockets
-    room_client: Option<Arc<RoomClient>>,
-    session_client: Arc<SessionClient>,
+    pub room_client: Option<Arc<RoomClient>>,
+    pub session_client: Arc<SessionClient>,
 }
 
 impl Player {
@@ -67,7 +71,7 @@ impl Player {
         is_authenticated: bool,
         uuid: PlayerUuid,
         ip: IpAddr,
-    ) -> Result<Arc<Self>> {
+    ) -> Result<Arc<RwLock<Self>>> {
         // all this data is fetched here to avoid locking the players and ids_to_uuids mutexes for too long
         let name = PlayerName::fetch_for_player_uuid(state, &uuid).await?;
         let rank = Rank::fetch_for_player_uuid(state, &uuid).await?;
@@ -86,7 +90,7 @@ impl Player {
             let mut players = state.players.players.lock();
 
             // the limit is 4 per ip
-            if players.values().filter(|x| x.ip == ip).count() >= 4 {
+            if players.values().filter(|x| x.read().ip == ip).count() >= 4 {
                 bail!("too many connections from ip");
             }
 
@@ -128,7 +132,7 @@ impl Player {
     pub fn is_blocked_with(&self, other: &Self) -> bool {
         self.blocked_users.contains(&other.uuid) || other.blocked_users.contains(&other.uuid)
     }
-    const fn is_unnamed_player_hidden_by(&self, other: &Self) -> bool {
+    pub const fn is_unnamed_player_hidden_by(&self, other: &Self) -> bool {
         self.name.is_none() && other.privacy_settings.hide_unnamed_players
     }
 }

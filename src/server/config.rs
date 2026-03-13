@@ -27,7 +27,8 @@ pub struct Config {
     pub bad_sounds: HashSet<String>,
     pub pictures: HashSet<String>,
     pub picture_prefixes: Vec<String>,
-    pub battle_anim_ids: HashSet<isize>,
+    #[serde(rename = "battle_anim_ids")]
+    pub battle_animation_ids: HashSet<u64>,
 
     // webhooks
     pub chat_webhook: String,
