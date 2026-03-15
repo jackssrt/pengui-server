@@ -56,10 +56,10 @@ impl Config {
         self.game_name == "2kki"
     }
     pub async fn parse(path: impl AsRef<Path>) -> Result<Self> {
-        let data = tokio::fs::read(path.as_ref()).await?;
-        let data = yaml_serde::from_slice::<Self>(&data)?;
+        let file = std::fs::File::open(path.as_ref())?;
+        let config = yaml_serde::from_reader(&file)?;
 
-        Ok(data)
+        Ok(config)
     }
 }
 
