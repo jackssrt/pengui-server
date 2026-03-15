@@ -50,7 +50,7 @@ async fn setup_router(state: Arc<AppState>) -> Result<()> {
 }
 
 pub async fn start() -> Result<()> {
-    println!("Now starting pengui-server...");
+    tracing::info!("starting");
     let state = Arc::new(AppState::setup().await?);
 
     init_history(&state);

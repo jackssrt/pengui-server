@@ -21,7 +21,7 @@ pub mod de;
 pub mod error;
 pub mod ser;
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Debug, PartialEq, Eq, Clone)]
 #[serde(deny_unknown_fields)]
 pub enum IncomingRoomPacket {
     #[serde(rename = "sr")]
@@ -126,13 +126,17 @@ pub enum IncomingRoomPacket {
 }
 impl IncomingRoomPacket {
     pub fn from_bytes(bytes: &[u8]) -> Result<Self> {
-        let mut deserializer = PacketDeserializer::new(bytes.into(), b"\xFF\xFF".into());
+        tracing::info!("deserializing {:x?}", bytes);
+        tracing::info!("as str {}", bstr::BStr::new(bytes));
+        let mut deserializer = PacketDeserializer::new(bytes.into(), b"\xef\xbf\xbf".into());
         Ok(Self::deserialize(&mut deserializer)?)
     }
 }
 
 #[derive(Serialize, Clone, Debug)]
 pub enum OutgoingRoomPacket {
+    #[serde(skip)]
+    Multiple(Vec<Self>),
     #[serde(rename = "s")]
     Sync {
         id: PlayerId,

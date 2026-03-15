@@ -1,4 +1,4 @@
-use std::{sync::Arc, time::Duration};
+use std::{fmt::Debug, sync::Arc, time::Duration};
 
 use anyhow::Result;
 use axum::{
@@ -7,8 +7,8 @@ use axum::{
     extract::DefaultBodyLimit,
     middleware::{from_fn_with_state, map_request},
     routing::{any, get},
+    serve::Listener,
 };
-use tokio::net::UnixListener;
 use tower::Layer;
 use tower_http::trace::TraceLayer;
 use tracing::Span;
@@ -36,7 +36,11 @@ mod room;
 mod save_sync;
 mod session;
 
-pub async fn setup_router(state: Arc<AppState>, listener: UnixListener) -> Result<()> {
+pub async fn setup_router<L>(state: Arc<AppState>, listener: L) -> Result<()>
+where
+    L: Listener,
+    L::Addr: Debug,
+{
     let authenticated = Router::new()
         .route("/api/savesync/get", get(handle_savesync_get))
         .route("/api/savesync/timestamp", get(handle_savesync_timestamp))
@@ -65,7 +69,7 @@ pub async fn setup_router(state: Arc<AppState>, listener: UnixListener) -> Resul
         ))
         .with_state(state);
     let app = map_request(rewrite_command_query).layer(app);
-    println!("Now serving requests.");
+    tracing::info!("serving requests");
     axum::serve(listener, app.into_make_service())
         .into_future()
         .await?;

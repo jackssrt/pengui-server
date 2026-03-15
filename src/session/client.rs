@@ -1,4 +1,4 @@
-use std::{io::Read, sync::Arc};
+use std::sync::Arc;
 
 use anyhow::Result;
 use axum::extract::ws::{Message, WebSocket};
@@ -12,10 +12,9 @@ impl SessionClient {
         let (mut sink, mut stream) = socket.split();
         tokio::spawn(async move {
             while let Some(Ok(Message::Text(text))) = stream.next().await {
-                tracing::trace!("TODO")
+                tracing::trace!("TODO");
             }
         });
-        let state = state.clone();
         tokio::spawn(async move {
             sink.send(Message::Text(
                 format!("pc\u{ffff}{}", state.players.players.lock().len()).into(),

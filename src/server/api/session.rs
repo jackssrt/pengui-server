@@ -1,10 +1,7 @@
-use std::{
-    net::{IpAddr, SocketAddr},
-    sync::Arc,
-};
+use std::{net::IpAddr, sync::Arc};
 
 use axum::{
-    extract::{ConnectInfo, State, WebSocketUpgrade, ws::WebSocket},
+    extract::{State, WebSocketUpgrade, ws::WebSocket},
     response::Response,
 };
 
@@ -30,7 +27,7 @@ pub async fn handle_session(
 ) -> Result<Response, AppError> {
     Ok(ws.on_upgrade(async move |socket| {
         if let Err(e) = handle_session_websocket(socket, state, auth, ip).await {
-            eprintln!("session handler error {e:?}");
+            tracing::error!("session handler error {e:?}");
         }
     }))
 }

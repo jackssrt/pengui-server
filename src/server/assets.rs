@@ -10,6 +10,7 @@ use walkdir::WalkDir;
 
 use crate::{room::ids::MapId, server::config::Config};
 
+#[derive(Debug)]
 pub struct Assets {
     config: Arc<Config>,
 
@@ -27,6 +28,14 @@ impl Assets {
         let systems = Self::get_systems(config.as_ref())?;
         let sounds = Self::get_sounds(config.as_ref());
         let pictures = Self::get_pictures(config.as_ref())?;
+        tracing::debug!(
+            "loaded {} maps, {} sprites, {} systems, {} sounds, and {} pictures",
+            maps.len(),
+            sprites.len(),
+            systems.len(),
+            sounds.len(),
+            pictures.len()
+        );
         Ok(Self {
             config,
             maps,
@@ -42,7 +51,6 @@ impl Assets {
             .map(|x| x.file_name())
             .filter_map(|x| x.to_str().map(ToOwned::to_owned))
             .filter(|x| x.len() == 11 && x[7..] == *".lmu")
-            .inspect(|x| tracing::debug!("{}", &x[3..7]))
             .filter_map(|x| x[3..7].parse().ok())
             .map(MapId)
             .collect())
@@ -54,18 +62,14 @@ impl Assets {
         get_stems("System", &config.game_path)
     }
     fn get_sounds(config: &Config) -> HashSet<String> {
-        let path = config.game_path.join("Sounds");
-        WalkDir::new(path)
+        let path = config.game_path.join("Sound");
+        #[allow(clippy::unwrap_used)]
+        WalkDir::new(&path)
             .into_iter()
             .filter_map(Result::ok)
-            .filter(|x| !x.metadata().is_ok_and(|x| x.is_dir()))
-            .map(|x| x.path().with_extension(""))
-            .filter_map(|x| {
-                Some([
-                    x.to_string_lossy().into(),
-                    x.to_str()?.replacen('/', "\\", 1),
-                ])
-            })
+            .filter(|x| x.metadata().is_ok_and(|x| !x.is_dir()))
+            .map(|x| x.path().strip_prefix(&path).unwrap().with_extension(""))
+            .filter_map(|x| Some([x.to_str()?.into(), x.to_str()?.replacen('/', "\\", 1)]))
             .flatten()
             .collect()
     }

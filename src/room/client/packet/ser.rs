@@ -202,9 +202,11 @@ impl Serializer for PacketSerializer {
         variant: &'static str,
         len: usize,
     ) -> Result<Self::SerializeTupleVariant, Self::Error> {
+        let mut parts = Vec::with_capacity(len + 1);
+        parts.push(bstr::B(variant).to_vec());
         Ok(Self::SerializeTupleVariant {
             delimiter: self.delimiter,
-            parts: Vec::with_capacity(len),
+            parts,
         })
     }
     fn serialize_struct_variant(
@@ -214,9 +216,11 @@ impl Serializer for PacketSerializer {
         variant: &'static str,
         len: usize,
     ) -> Result<Self::SerializeStructVariant, Self::Error> {
+        let mut parts = Vec::with_capacity(len + 1);
+        parts.push(bstr::B(variant).to_vec());
         Ok(Self::SerializeStructVariant {
             delimiter: self.delimiter,
-            parts: Vec::with_capacity(len),
+            parts,
         })
     }
 
@@ -225,5 +229,36 @@ impl Serializer for PacketSerializer {
             delimiter: self.delimiter,
             parts: len.map(Vec::with_capacity).unwrap_or_default(),
         })
+    }
+}
+#[cfg(test)]
+mod test {
+    use crate::{player::ids::PlayerId, room::client::packet::OutgoingRoomPacket};
+
+    use super::*;
+    #[test]
+    fn test() {
+        let packets_and_serialized = [
+            (
+                OutgoingRoomPacket::Jump {
+                    player_id: PlayerId(10),
+                    x: 20,
+                    y: 1,
+                },
+                bstr::B(b"jmp\xff\xff10\xff\xff20\xff\xff1"),
+            ),
+            (
+                OutgoingRoomPacket::BattleAnimation(PlayerId(999), 99),
+                bstr::B(b"ba\xff\xff999\xff\xff99"),
+            ),
+        ];
+        for (packet, result) in &packets_and_serialized {
+            let serializer = PacketSerializer::new(b"\xFF\xFF");
+
+            assert_eq!(
+                bstr::BStr::new(&packet.serialize(serializer).unwrap()),
+                bstr::BStr::new(result)
+            );
+        }
     }
 }

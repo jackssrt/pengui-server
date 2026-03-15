@@ -9,6 +9,7 @@ use axum::{
     response::IntoResponse,
 };
 use serde::Deserialize;
+use tracing::instrument;
 
 use crate::{
     player::Player,
@@ -28,6 +29,7 @@ pub struct RoomQuery {
 }
 
 #[axum::debug_handler]
+#[instrument(skip_all)]
 pub async fn handle_room(
     ws: WebSocketUpgrade,
     State(state): State<Arc<AppState>>,
@@ -35,7 +37,6 @@ pub async fn handle_room(
     Query(RoomQuery { id }): Query<RoomQuery>,
     r: Request,
 ) -> Result<impl IntoResponse, AppError> {
-    tracing::info!("new room client");
     let room = NonZeroU16::new(id).map_or_else(
         || todo!(),
         |id| {
@@ -50,21 +51,16 @@ pub async fn handle_room(
         },
     )?;
 
-    tracing::info!("got room");
     let is_authenticated = auth.is_authenticated();
     let uuid = auth.take_uuid();
-    tracing::info!("uuid");
     let player = state
         .players
         .get_by_uuid(&uuid)
         .await
         .ok_or_else(|| anyhow!("invalid player, are you connected to the session ws?"))?;
-    tracing::info!("plr");
-    Ok(ws.on_upgrade(async move |ws| {
-        if let Err(err) = handle_connection(state, ws, room, player, is_authenticated).await {
-            eprintln!("error in room websocket: {err}");
-        }
-    }))
+    Ok((ws.protocols(["binary"]).on_upgrade(async move |ws| {
+        let _ = handle_connection(state, ws, room, player, is_authenticated).await;
+    }),))
 }
 
 async fn handle_connection(
@@ -81,11 +77,14 @@ async fn handle_connection(
     );
     let (fut, client) = RoomClient::new(state, room.clone(), player.clone(), ws);
     room.write().players.push(player.clone());
+    let id = room.read().id.clone();
+    client.send_packet(OutgoingRoomPacket::RoomId(id)).await?;
     let packet = {
         let player = player.read();
+        let crypto = client.cryptography.lock();
         OutgoingRoomPacket::Sync {
             id: player.id,
-            key: client.cryptography.key,
+            key: crypto.key,
             uuid: player.uuid.clone(),
             rank: player.rank.clone(),
             is_authenticated,
@@ -94,9 +93,7 @@ async fn handle_connection(
         }
     };
     client.send_packet(packet).await?;
-    let id = room.read().id.clone();
-    client.send_packet(OutgoingRoomPacket::RoomId(id)).await?;
     fut.await;
-    tracing::error!("aa byee");
+    tracing::info!("goodbye");
     Ok(())
 }
