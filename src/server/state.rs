@@ -2,6 +2,7 @@ use std::sync::Arc;
 
 use anyhow::{Context, Result};
 use clap::Parser;
+use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
 use crate::server::{
     args::Args, assets::Assets, config::Config, database::Database, parties::Parties,
@@ -28,6 +29,32 @@ impl AppState {
                 .await
                 .context("failed to read config")?,
         );
+
+        // Logging
+        let (file_logger, _gaurd) = tracing_appender::non_blocking(
+            #[allow(clippy::expect_used)]
+            tracing_appender::rolling::Builder::new()
+                .filename_prefix("pengui-server")
+                .filename_suffix(".log")
+                .build(format!("logs/{}", config.game_name))
+                .expect("failed to build logger"),
+        );
+
+        tracing_subscriber::registry()
+            .with(
+                tracing_subscriber::EnvFilter::try_from_default_env().unwrap_or_else(|_| {
+                    // axum logs rejections from built-in extractors with the `axum::rejection`
+                    // target, at `TRACE` level. `axum::rejection=trace` enables showing those events
+                    format!(
+                        "{}=debug,tower_http=debug,axum::rejection=trace",
+                        env!("CARGO_CRATE_NAME")
+                    )
+                    .into()
+                }),
+            )
+            .with(tracing_subscriber::fmt::layer())
+            .with(tracing_subscriber::fmt::layer().with_writer(file_logger))
+            .init();
 
         // Database
         let database = Database::connect(&config)

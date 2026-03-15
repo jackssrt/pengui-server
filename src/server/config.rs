@@ -41,10 +41,6 @@ pub struct Config {
     #[serde(default)]
     pub ipc: Ipc,
 
-    // logging
-    #[serde(default)]
-    pub logging: Logging,
-
     // vapid keys
     pub vapid_keys: VapidKeys,
 
@@ -83,34 +79,14 @@ impl Default for Ipc {
         }
     }
 }
-#[derive(Deserialize, PartialEq, Eq, Debug, Default)]
-#[serde(rename_all = "camelCase")]
-#[allow(clippy::struct_field_names)]
-pub struct Logging {
-    #[serde(default = "Logging::max_size_default")]
-    pub max_size: isize,
-    #[serde(default = "Logging::max_backups_default")]
-    pub max_backups: isize,
-    #[serde(default = "Logging::max_age_default")]
-    pub max_age: Duration,
-}
-impl Logging {
-    const fn max_size_default() -> isize {
-        50
-    }
-    const fn max_backups_default() -> isize {
-        6
-    }
-    const fn max_age_default() -> Duration {
-        Duration::from_weeks(4)
-    }
-}
+
 #[derive(Deserialize, PartialEq, Eq, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct VapidKeys {
     pub private: String,
     pub public: String,
 }
+
 #[derive(Deserialize, PartialEq, Eq, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct Flags {

@@ -5,11 +5,13 @@ use axum::{
     Router, ServiceExt,
     body::Bytes,
     extract::DefaultBodyLimit,
+    http::HeaderValue,
     middleware::{from_fn_with_state, map_request},
     routing::{any, get},
     serve::Listener,
 };
 use tower::Layer;
+use tower_http::cors::{self, CorsLayer};
 use tower_http::trace::TraceLayer;
 use tracing::Span;
 
@@ -36,6 +38,10 @@ mod room;
 mod save_sync;
 mod session;
 
+// feel free to change :D
+static ALLOWED_ORIGINS: &[&str] = &["http://localhost:*", "https://ynoproject.net"];
+
+#[allow(clippy::unwrap_used)]
 pub async fn setup_router<L>(state: Arc<AppState>, listener: L) -> Result<()>
 where
     L: Listener,
@@ -56,17 +62,34 @@ where
             Arc::clone(&state),
             moderation_middleware,
         ));
-    let app = Router::new()
+    let websockets = Router::new()
         .route("/session", any(handle_session))
         .route("/room", any(handle_room))
+        .route_layer(
+            CorsLayer::new()
+                .allow_origin(cors::Any)
+                .allow_methods(cors::Any),
+        );
+    let app = Router::new()
         .route("/players", get(handle_players))
         .route("/api/info", get(handle_player_info))
+        .merge(websockets)
         .merge(authenticated)
         .layer(TraceLayer::new_for_http().on_body_chunk(
             |chunk: &Bytes, latency: Duration, _span: &Span| {
                 tracing::debug!("sending {:?}", chunk);
             },
         ))
+        .route_layer(
+            CorsLayer::new()
+                .allow_origin(
+                    ALLOWED_ORIGINS
+                        .iter()
+                        .map(|origin| origin.parse::<HeaderValue>().unwrap())
+                        .collect::<Vec<_>>(),
+                )
+                .allow_credentials(true),
+        )
         .with_state(state);
     let app = map_request(rewrite_command_query).layer(app);
     tracing::info!("serving requests");
