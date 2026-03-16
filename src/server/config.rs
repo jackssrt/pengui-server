@@ -48,8 +48,11 @@ pub struct Config {
     pub flags: Flags,
 }
 impl Config {
-    pub fn is_main_server(&self) -> bool {
+    pub fn is_2kki(&self) -> bool {
         self.game_name == "2kki"
+    }
+    pub fn is_main_server(&self) -> bool {
+        self.is_2kki()
     }
     pub async fn parse(path: impl AsRef<Path>) -> Result<Self> {
         let file = std::fs::File::open(path.as_ref())?;

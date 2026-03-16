@@ -1,6 +1,6 @@
 use anyhow::{Result, anyhow};
 use serde_repr::{Deserialize_repr, Serialize_repr};
-use strum::FromRepr;
+use strum::{EnumIs, FromRepr};
 
 use crate::{
     player::{ids::PlayerUuid, traits::FetchForPlayerUuid},
@@ -18,6 +18,7 @@ use crate::{
     Default,
     Clone,
     Debug,
+    EnumIs,
 )]
 #[repr(u8)]
 pub enum Rank {

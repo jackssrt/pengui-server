@@ -14,7 +14,7 @@ use crate::{
             flash::Flash,
             packet::{de::PacketDeserializer, ser::PacketSerializer},
         },
-        ids::MapId,
+        ids::{MapId, VariableId},
     },
 };
 pub mod de;
@@ -210,6 +210,7 @@ pub enum OutgoingPacket {
     },
     #[serde(rename = "ba")]
     BattleAnimation(PlayerId, u64),
+    SyncVariable(VariableId, u16),
 }
 
 static DELIMITER: &[u8] = b"\xEF\xBF\xBF";

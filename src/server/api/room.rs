@@ -77,7 +77,7 @@ async fn handle_connection(
     );
     let (fut, client) = Client::new(state, room.clone(), player.clone(), ws);
     room.write().players.push(player.clone());
-    let id = room.read().id.clone();
+    let id = room.read().id;
     client.send_packet(OutgoingPacket::RoomId(id)).await?;
     let packet = {
         let player = player.read();

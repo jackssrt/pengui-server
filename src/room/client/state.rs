@@ -1,4 +1,5 @@
 use std::{
+    collections::BTreeMap,
     num::NonZeroU16,
     sync::{Arc, nonpoison::RwLock},
 };
@@ -16,6 +17,7 @@ use crate::{
             flash::Flash,
             packet::{IncomingPacket, OutgoingPacket},
         },
+        ids::{SwitchId, VariableId},
     },
     server::{rooms::Rooms, state::AppState},
 };
@@ -39,6 +41,7 @@ pub struct ClientState {
     pub flash: Option<Flash>,
     pub transparency: u8,
     pub is_hidden: bool,
+    switch_cache: BTreeMap<SwitchId, bool>,
 }
 
 impl ClientState {
@@ -61,6 +64,7 @@ impl ClientState {
             flash: None,
             transparency: 0,
             is_hidden: false,
+            switch_cache: BTreeMap::new(),
         }))
     }
 
@@ -152,7 +156,9 @@ impl ClientState {
                 picture_name,
             } => todo!(),
             IncomingPacket::RemovePicture(_) => todo!(),
-            IncomingPacket::SyncSwitch { switch_id, value } => todo!(),
+            IncomingPacket::SyncSwitch { switch_id, value } => {
+                self.handle_sync_switch(switch_id, value).await
+            }
             IncomingPacket::SyncVariable { variable_id, value } => todo!(),
             IncomingPacket::SyncEvent {
                 is_action,
@@ -383,6 +389,40 @@ impl ClientState {
                     room_client.send_packet(packet).await.unwrap();
                 });
             });
+
+        Ok(())
+    }
+
+    async fn handle_sync_switch(&mut self, switch_id: u16, value: bool) -> Result<()> {
+        let switch_id = SwitchId(switch_id);
+
+        // 2kki debug switch
+        let is_2kki_debug_switch =
+            self.state.config.is_2kki() && switch_id == SwitchId::DEBUG_MODE_2KKI;
+        if is_2kki_debug_switch && self.player.read().rank.is_user() && value {
+            bail!("you tried to enable debug mode for everyone, don't do that");
+        }
+
+        // add to cache
+        self.switch_cache.insert(switch_id, value);
+
+        // time trial 2kki
+        let is_2kki_time_trial =
+            self.state.config.is_2kki() && switch_id == SwitchId::TIME_TRIAL_2KKI;
+        if is_2kki_time_trial {
+            if value {
+                self.outgoing_sender
+                    .send(OutgoingPacket::SyncVariable(
+                        VariableId::TIME_TRIAL_ELAPSED_2KKI,
+                        0,
+                    ))
+                    .await?;
+            }
+            return Ok(());
+        }
+
+        // TODO: minigame syncing, gonna rewrite soon:tm:
+        // TODO: condition syncing
 
         Ok(())
     }

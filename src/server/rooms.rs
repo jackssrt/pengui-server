@@ -19,7 +19,7 @@ impl Rooms {
         id: MapId,
     ) -> &mut Arc<RwLock<Room>> {
         rooms
-            .entry(id.clone())
+            .entry(id)
             .or_insert_with(move || Arc::new(RwLock::new(Room::new(id))))
     }
 }
