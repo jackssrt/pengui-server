@@ -23,7 +23,7 @@ pub mod ser;
 
 #[derive(Deserialize, Debug, PartialEq, Eq, Clone)]
 #[serde(deny_unknown_fields)]
-pub enum IncomingRoomPacket {
+pub enum IncomingPacket {
     #[serde(rename = "sr")]
     SwitchRoom(u16),
     #[serde(rename = "m")]
@@ -124,7 +124,7 @@ pub enum IncomingRoomPacket {
     #[serde(rename = "anc")]
     AnimationCommand,
 }
-impl IncomingRoomPacket {
+impl IncomingPacket {
     pub fn from_bytes(bytes: &[u8]) -> Result<Self> {
         tracing::info!("deserializing {:x?}", bytes);
         tracing::info!("as str {}", bstr::BStr::new(bytes));
@@ -134,7 +134,7 @@ impl IncomingRoomPacket {
 }
 
 #[derive(Serialize, Clone, Debug)]
-pub enum OutgoingRoomPacket {
+pub enum OutgoingPacket {
     #[serde(skip)]
     Multiple(Vec<Self>),
     #[serde(rename = "s")]
@@ -214,7 +214,7 @@ pub enum OutgoingRoomPacket {
 
 static DELIMITER: &[u8] = b"\xEF\xBF\xBF";
 
-impl OutgoingRoomPacket {
+impl OutgoingPacket {
     pub fn into_bytes(self) -> Result<Vec<u8>, error::PacketError> {
         self.serialize(PacketSerializer::new(DELIMITER))
     }

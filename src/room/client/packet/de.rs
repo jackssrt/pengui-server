@@ -301,7 +301,7 @@ impl<'de> Deserializer<'de> for &mut PacketDeserializer<'de> {
 mod test {
     use serde::Deserialize;
 
-    use crate::room::client::{direction::Direction, packet::IncomingRoomPacket};
+    use crate::room::client::{direction::Direction, packet::IncomingPacket};
 
     use super::*;
     #[test]
@@ -309,15 +309,15 @@ mod test {
         let data_and_deserialized = [
             (
                 bstr::B(b"jmp\xff\xff20\xff\xff1"),
-                IncomingRoomPacket::Jump { x: 20, y: 1 },
+                IncomingPacket::Jump { x: 20, y: 1 },
             ),
             (
                 bstr::B(b"tr\xff\xff50"),
-                IncomingRoomPacket::ChangeTransparency(50),
+                IncomingPacket::ChangeTransparency(50),
             ),
             (
                 bstr::B(b"f\xff\xff0"),
-                IncomingRoomPacket::ChangeFacingDirection(Direction::Up),
+                IncomingPacket::ChangeFacingDirection(Direction::Up),
             ),
         ];
         for (data, result) in &data_and_deserialized {
@@ -325,7 +325,7 @@ mod test {
                 PacketDeserializer::new(bstr::BStr::new(*data), b"\xFF\xFF".into());
 
             assert_eq!(
-                IncomingRoomPacket::deserialize(&mut deserializer).unwrap(),
+                IncomingPacket::deserialize(&mut deserializer).unwrap(),
                 *result
             );
         }

@@ -19,7 +19,7 @@ use crate::{
         rank::Rank,
         traits::{FetchForPlayerUuid, MaybeFetchForPlayerUuid},
     },
-    room::client::RoomClient,
+    room::client::Client,
     server::{players::Players, state::AppState},
     session::client::SessionClient,
 };
@@ -60,7 +60,7 @@ pub struct Player {
     pub online_friends: HashSet<PlayerUuid>,
     pub blocked_users: BlockedUsers,
     // sockets
-    pub room_client: Option<Arc<RoomClient>>,
+    pub room_client: Option<Arc<Client>>,
     pub session_client: Arc<SessionClient>,
 }
 

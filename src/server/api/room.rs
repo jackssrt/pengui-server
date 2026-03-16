@@ -15,7 +15,7 @@ use crate::{
     player::Player,
     room::{
         Room,
-        client::{RoomClient, packet::OutgoingRoomPacket},
+        client::{Client, packet::OutgoingPacket},
     },
     server::{
         api::extractors::authentication::OptionalQueryAuthentication, error::AppError,
@@ -75,14 +75,14 @@ async fn handle_connection(
         player.read().uuid.0,
         room.read().id
     );
-    let (fut, client) = RoomClient::new(state, room.clone(), player.clone(), ws);
+    let (fut, client) = Client::new(state, room.clone(), player.clone(), ws);
     room.write().players.push(player.clone());
     let id = room.read().id.clone();
-    client.send_packet(OutgoingRoomPacket::RoomId(id)).await?;
+    client.send_packet(OutgoingPacket::RoomId(id)).await?;
     let packet = {
         let player = player.read();
         let crypto = client.cryptography.lock();
-        OutgoingRoomPacket::Sync {
+        OutgoingPacket::Sync {
             id: player.id,
             key: crypto.key,
             uuid: player.uuid.clone(),

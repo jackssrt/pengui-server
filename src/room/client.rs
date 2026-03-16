@@ -17,8 +17,8 @@ use crate::{
         Room,
         client::{
             cryptography::Cryptography,
-            packet::{IncomingRoomPacket, OutgoingRoomPacket, error::PacketError},
-            state::RoomClientState,
+            packet::{IncomingPacket, OutgoingPacket, error::PacketError},
+            state::ClientState,
         },
     },
     server::state::AppState,
@@ -30,21 +30,21 @@ pub mod flash;
 pub mod packet;
 pub mod state;
 
-pub struct RoomClient {
-    pub state: Arc<Mutex<RoomClientState>>,
-    outgoing_sender: mpsc::Sender<OutgoingRoomPacket>,
+pub struct Client {
+    pub state: Arc<Mutex<ClientState>>,
+    outgoing_sender: mpsc::Sender<OutgoingPacket>,
     pub cryptography: Arc<std::sync::nonpoison::Mutex<Cryptography>>,
 }
 
-impl RoomClient {
+impl Client {
     pub fn new(
         state: Arc<AppState>,
         room: Arc<RwLock<Room>>,
         player: Arc<RwLock<Player>>,
         mut socket: WebSocket,
     ) -> (impl Future<Output = ()>, Self) {
-        let (outgoing_sender, mut outgoing_receiver) = mpsc::channel::<OutgoingRoomPacket>(100);
-        let state = RoomClientState::new(state, player, outgoing_sender.clone(), room);
+        let (outgoing_sender, mut outgoing_receiver) = mpsc::channel::<OutgoingPacket>(100);
+        let state = ClientState::new(state, player, outgoing_sender.clone(), room);
         let crypto = Arc::new(std::sync::nonpoison::Mutex::new(Cryptography::new()));
         #[allow(clippy::unwrap_used)]
         let fut = {
@@ -81,7 +81,7 @@ impl RoomClient {
         )
     }
     async fn handle_incoming(
-        state: &Mutex<RoomClientState>,
+        state: &Mutex<ClientState>,
         crypto: &std::sync::nonpoison::Mutex<Cryptography>,
         data: &[u8],
     ) -> ControlFlow<()> {
@@ -95,7 +95,7 @@ impl RoomClient {
         };
         // deserialize and do stuff here
         for packet_bytes in data.split_str("\u{FFFE}") {
-            let Ok(packet) = IncomingRoomPacket::from_bytes(packet_bytes) else {
+            let Ok(packet) = IncomingPacket::from_bytes(packet_bytes) else {
                 tracing::error!("failed to deserialize");
                 return ControlFlow::Break(());
             };
@@ -107,14 +107,11 @@ impl RoomClient {
         }
         ControlFlow::Continue(())
     }
-    async fn handle_outgoing(
-        socket: &mut WebSocket,
-        packet: OutgoingRoomPacket,
-    ) -> ControlFlow<()> {
-        let Ok(bytes) = (if let OutgoingRoomPacket::Multiple(packets) = packet {
+    async fn handle_outgoing(socket: &mut WebSocket, packet: OutgoingPacket) -> ControlFlow<()> {
+        let Ok(bytes) = (if let OutgoingPacket::Multiple(packets) = packet {
             packets
                 .into_iter()
-                .map(OutgoingRoomPacket::into_bytes)
+                .map(OutgoingPacket::into_bytes)
                 .collect::<Result<Vec<_>, PacketError>>()
                 .map(|x| x.join(bstr::B("\u{FFFE}")))
         } else {
@@ -127,7 +124,7 @@ impl RoomClient {
         ControlFlow::Continue(())
     }
 
-    pub async fn send_packet(&self, packet: OutgoingRoomPacket) -> Result<()> {
+    pub async fn send_packet(&self, packet: OutgoingPacket) -> Result<()> {
         self.outgoing_sender.send(packet).await?;
         Ok(())
     }

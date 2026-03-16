@@ -14,7 +14,7 @@ use crate::{
         client::{
             direction::Direction,
             flash::Flash,
-            packet::{IncomingRoomPacket, OutgoingRoomPacket},
+            packet::{IncomingPacket, OutgoingPacket},
         },
     },
     server::{rooms::Rooms, state::AppState},
@@ -26,9 +26,9 @@ enum MovementType {
     Jump,
     Teleport,
 }
-pub struct RoomClientState {
+pub struct ClientState {
     state: Arc<AppState>,
-    outgoing_sender: Sender<OutgoingRoomPacket>,
+    outgoing_sender: Sender<OutgoingPacket>,
     pub room: Arc<RwLock<Room>>,
     pub player: Arc<RwLock<Player>>,
     pub x: u16,
@@ -41,11 +41,11 @@ pub struct RoomClientState {
     pub is_hidden: bool,
 }
 
-impl RoomClientState {
+impl ClientState {
     pub fn new(
         state: Arc<AppState>,
         player: Arc<RwLock<Player>>,
-        outgoing_sender: Sender<OutgoingRoomPacket>,
+        outgoing_sender: Sender<OutgoingPacket>,
         room: Arc<RwLock<Room>>,
     ) -> Arc<Mutex<Self>> {
         Arc::new(Mutex::new(Self {
@@ -64,35 +64,27 @@ impl RoomClientState {
         }))
     }
 
-    pub async fn handle_incoming_packet(&mut self, packet: IncomingRoomPacket) -> Result<()> {
+    pub async fn handle_incoming_packet(&mut self, packet: IncomingPacket) -> Result<()> {
         match packet {
-            IncomingRoomPacket::SwitchRoom(new_id) => {
+            IncomingPacket::SwitchRoom(new_id) => {
                 self.handle_switch_room(NonZeroU16::new(new_id)).await
             }
-            IncomingRoomPacket::Move { x, y } => {
-                self.handle_movement(MovementType::Move, x, y).await
-            }
-            IncomingRoomPacket::Teleport { x, y } => {
+            IncomingPacket::Move { x, y } => self.handle_movement(MovementType::Move, x, y).await,
+            IncomingPacket::Teleport { x, y } => {
                 self.handle_movement(MovementType::Teleport, x, y).await
             }
-            IncomingRoomPacket::Jump { x, y } => {
-                self.handle_movement(MovementType::Jump, x, y).await
-            }
-            IncomingRoomPacket::ChangeFacingDirection(direction) => {
-                self.handle_facing(direction).await
-            }
-            IncomingRoomPacket::PlayerFlash(flash) => self.handle_flash(flash).await,
-            IncomingRoomPacket::RepeatingPlayerFlash(flash) => {
-                self.handle_repeating_flash(flash).await
-            }
-            IncomingRoomPacket::ChangeTransparency(transparency) => {
+            IncomingPacket::Jump { x, y } => self.handle_movement(MovementType::Jump, x, y).await,
+            IncomingPacket::ChangeFacingDirection(direction) => self.handle_facing(direction).await,
+            IncomingPacket::PlayerFlash(flash) => self.handle_flash(flash).await,
+            IncomingPacket::RepeatingPlayerFlash(flash) => self.handle_repeating_flash(flash).await,
+            IncomingPacket::ChangeTransparency(transparency) => {
                 self.handle_transparency(transparency).await
             }
-            IncomingRoomPacket::ChangeSpriteVisibility { is_hidden } => {
+            IncomingPacket::ChangeSpriteVisibility { is_hidden } => {
                 self.handle_visibility(is_hidden).await
             }
-            IncomingRoomPacket::ChangeSystemGraphic(system) => self.handle_system(system).await,
-            IncomingRoomPacket::PlaySoundEffect {
+            IncomingPacket::ChangeSystemGraphic(system) => self.handle_system(system).await,
+            IncomingPacket::PlaySoundEffect {
                 name,
                 volume,
                 tempo,
@@ -101,15 +93,13 @@ impl RoomClientState {
                 self.handle_play_sound_effect(name, volume, tempo, balance)
                     .await
             }
-            IncomingRoomPacket::BattleAnimation(id) => self.handle_battle_animation(id).await,
-            IncomingRoomPacket::ChangeSpeed(speed) => self.handle_speed(speed).await,
-            IncomingRoomPacket::ChangeSprite { name, index } => {
-                self.handle_sprite(name, index).await
-            }
-            IncomingRoomPacket::RemoveRepeatingPlayerFlash => {
+            IncomingPacket::BattleAnimation(id) => self.handle_battle_animation(id).await,
+            IncomingPacket::ChangeSpeed(speed) => self.handle_speed(speed).await,
+            IncomingPacket::ChangeSprite { name, index } => self.handle_sprite(name, index).await,
+            IncomingPacket::RemoveRepeatingPlayerFlash => {
                 self.handle_remove_repeating_flash().await
             }
-            IncomingRoomPacket::AddPicture {
+            IncomingPacket::AddPicture {
                 id,
                 pos_x,
                 pos_y,
@@ -142,7 +132,7 @@ impl RoomClientState {
                 flip_y,
                 origin,
             } => todo!(),
-            IncomingRoomPacket::MovePicture {
+            IncomingPacket::MovePicture {
                 id,
                 pos_x,
                 pos_y,
@@ -161,14 +151,14 @@ impl RoomClientState {
                 effect_power,
                 picture_name,
             } => todo!(),
-            IncomingRoomPacket::RemovePicture(_) => todo!(),
-            IncomingRoomPacket::SyncSwitch { switch_id, value } => todo!(),
-            IncomingRoomPacket::SyncVariable { variable_id, value } => todo!(),
-            IncomingRoomPacket::SyncEvent {
+            IncomingPacket::RemovePicture(_) => todo!(),
+            IncomingPacket::SyncSwitch { switch_id, value } => todo!(),
+            IncomingPacket::SyncVariable { variable_id, value } => todo!(),
+            IncomingPacket::SyncEvent {
                 is_action,
                 event_id,
             } => todo!(),
-            IncomingRoomPacket::AnimationCommand => todo!(),
+            IncomingPacket::AnimationCommand => todo!(),
         }?;
         Ok(())
     }
@@ -210,7 +200,7 @@ impl RoomClientState {
         let id = self.player.read().id;
         if movement_type.is_jump() {
             self.outgoing_sender
-                .send(OutgoingRoomPacket::Jump {
+                .send(OutgoingPacket::Jump {
                     player_id: id,
                     x,
                     y,
@@ -218,7 +208,7 @@ impl RoomClientState {
                 .await?;
         } else {
             self.outgoing_sender
-                .send(OutgoingRoomPacket::Move {
+                .send(OutgoingPacket::Move {
                     player_id: id,
                     x,
                     y,
@@ -232,7 +222,7 @@ impl RoomClientState {
         self.facing = direction;
         let id = self.player.read().id;
         self.outgoing_sender
-            .send(OutgoingRoomPacket::ChangeFacingDirection {
+            .send(OutgoingPacket::ChangeFacingDirection {
                 player_id: id,
                 direction,
             })
@@ -243,7 +233,7 @@ impl RoomClientState {
         let speed = speed.min(10);
         self.speed = speed;
         let id = self.player.read().id;
-        self.broadcast(OutgoingRoomPacket::ChangeSpeed {
+        self.broadcast(OutgoingPacket::ChangeSpeed {
             player_id: id,
             speed,
         })
@@ -262,7 +252,7 @@ impl RoomClientState {
             player.game_data.sprite_index = sprite_index;
             player.id
         };
-        self.broadcast(OutgoingRoomPacket::ChangeSprite {
+        self.broadcast(OutgoingPacket::ChangeSprite {
             player_id: id,
             name: sprite,
             index: sprite_index,
@@ -273,7 +263,7 @@ impl RoomClientState {
 
     async fn handle_flash(&self, flash: Flash) -> Result<()> {
         let id = self.player.read().id;
-        self.broadcast(OutgoingRoomPacket::PlayerFlash {
+        self.broadcast(OutgoingPacket::PlayerFlash {
             player_id: id,
             flash,
         })
@@ -284,7 +274,7 @@ impl RoomClientState {
     async fn handle_repeating_flash(&mut self, flash: Flash) -> Result<()> {
         let id = self.player.read().id;
         self.flash = Some(flash.clone());
-        self.broadcast(OutgoingRoomPacket::RepeatingPlayerFlash {
+        self.broadcast(OutgoingPacket::RepeatingPlayerFlash {
             player_id: id,
             flash,
         })
@@ -295,7 +285,7 @@ impl RoomClientState {
     async fn handle_remove_repeating_flash(&mut self) -> Result<()> {
         let id = self.player.read().id;
         self.flash = None;
-        self.broadcast(OutgoingRoomPacket::RemoveRepeatingPlayerFlash(id))
+        self.broadcast(OutgoingPacket::RemoveRepeatingPlayerFlash(id))
             .await?;
         Ok(())
     }
@@ -304,7 +294,7 @@ impl RoomClientState {
         let id = self.player.read().id;
         // 0 - 7
         let transparency = transparency.min(7);
-        self.broadcast(OutgoingRoomPacket::ChangeTransparency(id, transparency))
+        self.broadcast(OutgoingPacket::ChangeTransparency(id, transparency))
             .await?;
         Ok(())
     }
@@ -312,7 +302,7 @@ impl RoomClientState {
     async fn handle_visibility(&mut self, is_hidden: bool) -> Result<()> {
         let id = self.player.read().id;
         self.is_hidden = is_hidden;
-        self.broadcast(OutgoingRoomPacket::ChangeSpriteVisibility {
+        self.broadcast(OutgoingPacket::ChangeSpriteVisibility {
             player_id: id,
             is_hidden,
         })
@@ -329,7 +319,7 @@ impl RoomClientState {
             player.game_data.system.clone_from(&system);
             player.id
         };
-        self.broadcast(OutgoingRoomPacket::ChangeSystemGraphic(id, system))
+        self.broadcast(OutgoingPacket::ChangeSystemGraphic(id, system))
             .await?;
         Ok(())
     }
@@ -348,7 +338,7 @@ impl RoomClientState {
         let volume = volume.min(100);
         let tempo = tempo.clamp(10, 400);
         let balance = balance.min(100);
-        self.broadcast(OutgoingRoomPacket::PlaySoundEffect {
+        self.broadcast(OutgoingPacket::PlaySoundEffect {
             player_id: id,
             name,
             volume,
@@ -363,12 +353,12 @@ impl RoomClientState {
             bail!("invalid battle animation id")
         }
         let player_id = self.player.read().id;
-        self.broadcast(OutgoingRoomPacket::BattleAnimation(player_id, id))
+        self.broadcast(OutgoingPacket::BattleAnimation(player_id, id))
             .await?;
         Ok(())
     }
 
-    async fn broadcast(&self, packet: OutgoingRoomPacket) -> Result<()> {
+    async fn broadcast(&self, packet: OutgoingPacket) -> Result<()> {
         let player = self.player.read();
         if player.moderation_status.is_banned() {
             return Err(anyhow!("player is banned"));

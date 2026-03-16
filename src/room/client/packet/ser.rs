@@ -233,14 +233,14 @@ impl Serializer for PacketSerializer {
 }
 #[cfg(test)]
 mod test {
-    use crate::{player::ids::PlayerId, room::client::packet::OutgoingRoomPacket};
+    use crate::{player::ids::PlayerId, room::client::packet::OutgoingPacket};
 
     use super::*;
     #[test]
     fn test() {
         let packets_and_serialized = [
             (
-                OutgoingRoomPacket::Jump {
+                OutgoingPacket::Jump {
                     player_id: PlayerId(10),
                     x: 20,
                     y: 1,
@@ -248,7 +248,7 @@ mod test {
                 bstr::B(b"jmp\xff\xff10\xff\xff20\xff\xff1"),
             ),
             (
-                OutgoingRoomPacket::BattleAnimation(PlayerId(999), 99),
+                OutgoingPacket::BattleAnimation(PlayerId(999), 99),
                 bstr::B(b"ba\xff\xff999\xff\xff99"),
             ),
         ];
