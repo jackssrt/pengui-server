@@ -52,6 +52,8 @@ impl RoomClient {
             let state = state.clone();
             async move {
                 loop {
+                    // these share state, which means if we were to split them up into two tasks
+                    // they would just contest the mutex instead of actually doing work any faster
                     select! {
                         Some(packet) = outgoing_receiver.recv() => {
                             if Self::handle_outgoing(&mut socket, packet).await == ControlFlow::Break(()) {
