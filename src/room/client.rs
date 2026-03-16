@@ -114,7 +114,7 @@ impl RoomClient {
                 .into_iter()
                 .map(OutgoingRoomPacket::into_bytes)
                 .collect::<Result<Vec<_>, PacketError>>()
-                .map(|x| x.join(bstr::B(&[0xff, 0xfe])))
+                .map(|x| x.join(bstr::B("\u{FFFE}")))
         } else {
             packet.into_bytes()
         }) else {
