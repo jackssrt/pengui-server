@@ -42,6 +42,7 @@ pub struct ClientState {
     pub transparency: u8,
     pub is_hidden: bool,
     switch_cache: BTreeMap<SwitchId, bool>,
+    variable_cache: BTreeMap<VariableId, u16>,
 }
 
 impl ClientState {
@@ -65,6 +66,7 @@ impl ClientState {
             transparency: 0,
             is_hidden: false,
             switch_cache: BTreeMap::new(),
+            variable_cache: BTreeMap::new(),
         }))
     }
 
@@ -159,7 +161,9 @@ impl ClientState {
             IncomingPacket::SyncSwitch { switch_id, value } => {
                 self.handle_sync_switch(switch_id, value).await
             }
-            IncomingPacket::SyncVariable { variable_id, value } => todo!(),
+            IncomingPacket::SyncVariable { variable_id, value } => {
+                self.handle_sync_variable(variable_id, value)
+            }
             IncomingPacket::SyncEvent {
                 is_action,
                 event_id,
@@ -424,6 +428,15 @@ impl ClientState {
         // TODO: minigame syncing, gonna rewrite soon:tm:
         // TODO: condition syncing
 
+        Ok(())
+    }
+
+    #[allow(clippy::unnecessary_wraps)]
+    fn handle_sync_variable(&mut self, variable_id: u16, value: u16) -> Result<()> {
+        self.variable_cache.insert(VariableId(variable_id), value);
+        // TODO: 2kki time trial
+        // TODO: minigames
+        // TODO: conditions
         Ok(())
     }
 }
