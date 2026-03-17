@@ -22,12 +22,22 @@ use crate::{
     server::{rooms::Rooms, state::AppState},
 };
 
+use super::packet::{AddPictureData, PictureData};
+
 #[derive(EnumIs)]
 enum MovementType {
     Move,
     Jump,
     Teleport,
 }
+#[derive(EnumIs)]
+enum ExtraPictureData {
+    Move { duration: u64 },
+    Add(AddPictureData),
+}
+
+struct SavedPicture(PictureData, AddPictureData);
+
 pub struct ClientState {
     state: Arc<AppState>,
     outgoing_sender: Sender<OutgoingPacket>,
@@ -43,9 +53,12 @@ pub struct ClientState {
     pub is_hidden: bool,
     switch_cache: BTreeMap<SwitchId, bool>,
     variable_cache: BTreeMap<VariableId, u16>,
+    saved_picture: Option<SavedPicture>,
 }
 
 impl ClientState {
+    const MAX_PICTURE_ID: u16 = 1000;
+
     pub fn new(
         state: Arc<AppState>,
         player: Arc<RwLock<Player>>,
@@ -67,6 +80,7 @@ impl ClientState {
             is_hidden: false,
             switch_cache: BTreeMap::new(),
             variable_cache: BTreeMap::new(),
+            saved_picture: None,
         }))
     }
 
@@ -106,58 +120,20 @@ impl ClientState {
                 self.handle_remove_repeating_flash().await
             }
             IncomingPacket::AddPicture {
-                id,
-                pos_x,
-                pos_y,
-                map_x,
-                map_y,
-                pan_x,
-                pan_y,
-                magnify,
-                top_transparency,
-                bottom_transparency,
-                red,
-                green,
-                blue,
-                saturation,
-                effect_mode,
-                effect_power,
-                picture_name,
-                use_transparent_color,
-                fixed_to_map,
-                spritesheet_rows,
-                spritesheet_cols,
-                spritesheet_frame,
-                spritesheet_speed,
-                spritesheet_play_once,
-                map_layer,
-                battle_layer,
-                flags,
-                blend_mode,
-                flip_x,
-                flip_y,
-                origin,
-            } => todo!(),
+                picture_data,
+                add_picture_data,
+            } => {
+                self.handle_picture(picture_data, ExtraPictureData::Add(add_picture_data))
+                    .await
+            }
             IncomingPacket::MovePicture {
-                id,
-                pos_x,
-                pos_y,
-                map_x,
-                map_y,
-                pan_x,
-                pan_y,
-                magnify,
-                top_transparency,
-                bottom_transparency,
-                red,
-                green,
-                blue,
-                saturation,
-                effect_mode,
-                effect_power,
-                picture_name,
-            } => todo!(),
-            IncomingPacket::RemovePicture(_) => todo!(),
+                picture_data,
+                duration,
+            } => {
+                self.handle_picture(picture_data, ExtraPictureData::Move { duration })
+                    .await
+            }
+            IncomingPacket::RemovePicture(id) => self.handle_remove_picture(id).await,
             IncomingPacket::SyncSwitch { switch_id, value } => {
                 self.handle_sync_switch(switch_id, value).await
             }
@@ -437,6 +413,77 @@ impl ClientState {
         // TODO: 2kki time trial
         // TODO: minigames
         // TODO: conditions
+        Ok(())
+    }
+
+    async fn handle_picture(
+        &mut self,
+        picture_data: PictureData,
+        extra_picture_data: ExtraPictureData,
+    ) -> Result<()> {
+        // TODO: tbh this whole picture system feels weird
+        // since i don't really know how it's used
+        // there's prob a lot of bugs in here
+        if extra_picture_data.is_add() {
+            // TODO: conditions
+            if !self
+                .state
+                .assets
+                .is_valid_picture(&picture_data.picture_name)
+            {
+                bail!("invalid picture")
+            }
+        }
+        if picture_data.picture_name.is_empty() {
+            bail!("invalid picture name")
+        }
+        if picture_data.id > Self::MAX_PICTURE_ID {
+            // TODO: better error handling here
+            bail!("too many pictures")
+        }
+        let red = picture_data.red.min(200);
+        let green = picture_data.green.min(200);
+        let blue = picture_data.blue.min(200);
+        let saturation = picture_data.saturation.min(200);
+        let saved_picture = if let ExtraPictureData::Add(ref add_picture_data) = extra_picture_data
+        {
+            SavedPicture(
+                PictureData {
+                    red,
+                    green,
+                    blue,
+                    saturation,
+                    ..picture_data
+                },
+                add_picture_data.clone(),
+            )
+        } else {
+            self.saved_picture
+                .take()
+                .ok_or_else(|| anyhow!("tried to modify non-existant picture"))?
+        };
+
+        self.broadcast(match extra_picture_data {
+            ExtraPictureData::Add(_) => OutgoingPacket::AddPicture {
+                picture_data: saved_picture.0.clone(),
+                add_picture_data: saved_picture.1.clone(),
+            },
+            ExtraPictureData::Move { duration } => OutgoingPacket::MovePicture {
+                picture_data: saved_picture.0.clone(),
+                duration,
+            },
+        })
+        .await?;
+
+        if !saved_picture.1.spritesheet_play_once {
+            self.saved_picture = Some(saved_picture);
+        }
+        Ok(())
+    }
+
+    async fn handle_remove_picture(&mut self, id: u16) -> Result<()> {
+        self.saved_picture
+            .take_if(|SavedPicture(PictureData { id: x, .. }, ..)| *x == id);
         Ok(())
     }
 }

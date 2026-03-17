@@ -21,6 +21,47 @@ pub mod de;
 pub mod error;
 pub mod ser;
 
+#[derive(Deserialize, Debug, PartialEq, Eq, Clone, Serialize)]
+#[serde(deny_unknown_fields)]
+pub struct PictureData {
+    pub id: u16,
+    pub pos_x: i16,
+    pub pos_y: i16,
+    pub map_x: i16,
+    pub map_y: i16,
+    pub pan_x: i16,
+    pub pan_y: i16,
+    pub magnify: u64,
+    pub top_transparency: u8,
+    pub bottom_transparency: u8,
+    pub red: u8,
+    pub green: u8,
+    pub blue: u8,
+    pub saturation: u64,
+    pub effect_mode: u64,
+    pub effect_power: i64,
+    pub picture_name: String,
+}
+#[allow(clippy::struct_excessive_bools)]
+#[derive(Deserialize, Debug, PartialEq, Eq, Clone, Serialize)]
+#[serde(deny_unknown_fields)]
+pub struct AddPictureData {
+    pub use_transparent_color: bool,
+    pub fixed_to_map: bool,
+    pub spritesheet_rows: u64,
+    pub spritesheet_cols: u64,
+    pub spritesheet_frame: u64,
+    pub spritesheet_speed: u64,
+    pub spritesheet_play_once: bool,
+    pub map_layer: u64,
+    pub battle_layer: u64,
+    pub flags: u64,
+    pub blend_mode: u64,
+    pub flip_x: bool,
+    pub flip_y: bool,
+    pub origin: u64,
+}
+
 #[derive(Deserialize, Debug, PartialEq, Eq, Clone)]
 #[serde(deny_unknown_fields)]
 pub enum IncomingPacket {
@@ -59,57 +100,16 @@ pub enum IncomingPacket {
     },
     #[serde(rename = "ap")]
     AddPicture {
-        id: u16,
-        pos_x: i16,
-        pos_y: i16,
-        map_x: u16,
-        map_y: u16,
-        pan_x: i16,
-        pan_y: i16,
-        magnify: u64,
-        top_transparency: u8,
-        bottom_transparency: u8,
-        red: u8,
-        green: u8,
-        blue: u8,
-        saturation: u64,
-        effect_mode: u64,
-        effect_power: u64,
-        picture_name: String,
-        use_transparent_color: bool,
-        fixed_to_map: bool,
-        spritesheet_rows: u64,
-        spritesheet_cols: u64,
-        spritesheet_frame: u64,
-        spritesheet_speed: u64,
-        spritesheet_play_once: bool,
-        map_layer: u64,
-        battle_layer: u64,
-        flags: u64,
-        blend_mode: u64,
-        flip_x: bool,
-        flip_y: bool,
-        origin: u64,
+        #[serde(flatten)]
+        picture_data: PictureData,
+        #[serde(flatten)]
+        add_picture_data: AddPictureData,
     },
     #[serde(rename = "mp")]
     MovePicture {
-        id: u16,
-        pos_x: i16,
-        pos_y: i16,
-        map_x: i16,
-        map_y: i16,
-        pan_x: i16,
-        pan_y: i16,
-        magnify: u64,
-        top_transparency: u8,
-        bottom_transparency: u8,
-        red: u8,
-        green: u8,
-        blue: u8,
-        saturation: u64,
-        effect_mode: u64,
-        effect_power: u64,
-        picture_name: String,
+        #[serde(flatten)]
+        picture_data: PictureData,
+        duration: u64,
     },
     #[serde(rename = "rp")]
     RemovePicture(u16),
@@ -159,11 +159,23 @@ pub enum OutgoingPacket {
     #[serde(rename = "anc")]
     AnimationCommand,
     #[serde(rename = "m")]
-    Move { player_id: PlayerId, x: u16, y: u16 },
+    Move {
+        player_id: PlayerId,
+        x: u16,
+        y: u16,
+    },
     #[serde(rename = "tp")]
-    Teleport { player_id: PlayerId, x: u16, y: u16 },
+    Teleport {
+        player_id: PlayerId,
+        x: u16,
+        y: u16,
+    },
     #[serde(rename = "jmp")]
-    Jump { player_id: PlayerId, x: u16, y: u16 },
+    Jump {
+        player_id: PlayerId,
+        x: u16,
+        y: u16,
+    },
     #[serde(rename = "f")]
     ChangeFacingDirection {
         player_id: PlayerId,
@@ -176,7 +188,10 @@ pub enum OutgoingPacket {
         index: u32,
     },
     #[serde(rename = "spd")]
-    ChangeSpeed { player_id: PlayerId, speed: u8 },
+    ChangeSpeed {
+        player_id: PlayerId,
+        speed: u8,
+    },
     #[serde(rename = "fl")]
     PlayerFlash {
         player_id: PlayerId,
@@ -211,6 +226,19 @@ pub enum OutgoingPacket {
     #[serde(rename = "ba")]
     BattleAnimation(PlayerId, u64),
     SyncVariable(VariableId, u16),
+    #[serde(rename = "ap")]
+    AddPicture {
+        #[serde(flatten)]
+        picture_data: PictureData,
+        #[serde(flatten)]
+        add_picture_data: AddPictureData,
+    },
+    #[serde(rename = "mp")]
+    MovePicture {
+        #[serde(flatten)]
+        picture_data: PictureData,
+        duration: u64,
+    },
 }
 
 static DELIMITER: &[u8] = b"\xEF\xBF\xBF";

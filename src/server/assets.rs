@@ -104,7 +104,7 @@ impl Assets {
             name => self.sounds.contains(name),
         }
     }
-    pub fn is_valid_picture(&self, name: &String) -> bool {
+    pub fn is_valid_picture(&self, name: &str) -> bool {
         match name {
             name if name.contains('/') || name.contains('\\') => false,
             name if !self.pictures.contains(name) => false,
