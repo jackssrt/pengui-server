@@ -1,5 +1,6 @@
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
+use serde_repr::{Deserialize_repr, Serialize_repr};
 
 use crate::{
     player::{
@@ -60,6 +61,12 @@ pub struct AddPictureData {
     pub flip_x: bool,
     pub flip_y: bool,
     pub origin: u64,
+}
+#[derive(Serialize_repr, Deserialize_repr, Debug, PartialEq, Eq, PartialOrd, Ord, Clone)]
+#[repr(u8)]
+pub enum AnimationCommand {
+    Start,
+    Stop,
 }
 
 #[derive(Deserialize, Debug, PartialEq, Eq, Clone)]
@@ -122,7 +129,7 @@ pub enum IncomingPacket {
     #[serde(rename = "sev")]
     SyncEvent { is_action: bool, event_id: u32 },
     #[serde(rename = "anc")]
-    AnimationCommand,
+    AnimationCommand(AnimationCommand),
 }
 impl IncomingPacket {
     pub fn from_bytes(bytes: &[u8]) -> Result<Self> {
@@ -157,7 +164,7 @@ pub enum OutgoingPacket {
     #[serde(rename = "bas")]
     SyncBattleAnimations(Vec<String>),
     #[serde(rename = "anc")]
-    AnimationCommand,
+    AnimationCommand(PlayerId, AnimationCommand),
     #[serde(rename = "m")]
     Move {
         player_id: PlayerId,

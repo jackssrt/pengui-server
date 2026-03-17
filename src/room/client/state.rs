@@ -22,7 +22,7 @@ use crate::{
     server::{rooms::Rooms, state::AppState},
 };
 
-use super::packet::{AddPictureData, PictureData};
+use super::packet::{AddPictureData, AnimationCommand, PictureData};
 
 #[derive(EnumIs)]
 enum MovementType {
@@ -144,7 +144,9 @@ impl ClientState {
                 is_action,
                 event_id,
             } => todo!(),
-            IncomingPacket::AnimationCommand => todo!(),
+            IncomingPacket::AnimationCommand(command) => {
+                self.handle_animation_command(command).await
+            }
         }?;
         Ok(())
     }
@@ -484,6 +486,13 @@ impl ClientState {
     async fn handle_remove_picture(&mut self, id: u16) -> Result<()> {
         self.saved_picture
             .take_if(|SavedPicture(PictureData { id: x, .. }, ..)| *x == id);
+        Ok(())
+    }
+
+    async fn handle_animation_command(&self, command: AnimationCommand) -> Result<()> {
+        // can't hold sync rwlock guard across await points
+        let packet = { OutgoingPacket::AnimationCommand(self.player.read().id, command) };
+        self.broadcast(packet).await?;
         Ok(())
     }
 }
