@@ -48,6 +48,58 @@ where `{game_name}` is the game_name field of the config
 
 this project is bound by the AGPL-3.0 license because it contains a lot of ported code from the original go implementation. even though most rust projects are dual licensed under the MIT license and the Apache-2.0 license, this project is still licensed under the AGPL-3.0 because of its restrictions on derivative works.
 
+## progress
+
+- [ ] room websocket
+  - [X] client handler
+    - [X] message signing
+  - [X] switch room (partial)
+  - [X] movement
+  - [X] facing direction
+  - [X] flashing
+  - [ ] tone
+  - [X] transparency & visibility
+  - [X] system graphic
+  - [X] sound effects
+  - [X] battle animations
+  - [X] changing sprites
+  - [X] pictures (`experimental`)
+  - [X] syncing switches (`partial`)
+  - [X] syncing variables (`partial`)
+  - [ ] syncing events
+  - these sync events require a lot of supporting infrastructure, which i haven't made yet
+  - [X] animation commands
+- [ ] session websocket
+  - [ ] client handler (`needs a refactor`)
+  - [ ] player count (`buggy`)
+  - ...
+- [ ] api (partial)
+  - [ ] friends
+  - [ ] parties
+  - [ ] badges
+  - [ ] admin
+  - [X] player info
+  - [X] save syncing
+  - [ ] reporting
+  - [ ] notifications
+  - [ ] events
+  - [ ] screenshots
+  - ...
+- [ ] infrastructure
+  - [X] database, ask for newer schema dump?
+  - [X] current player registry
+  - [X] router
+  - [X] authentication middleware
+  - [X] moderation middleware
+  - [X] minigames (`needs a refactor`)
+  - [ ] ipc
+  - [X] config
+  - [X] command line
+  - [X] assets
+  - [ ] production docker file
+  - [ ] documentation
+  - ...
+
 ## other projects
 
 also check out [pengui-ball](https://github.com/AcrylonitrileButadieneStyrene/pengui-ball/tree/master), the rust rewrite of the frontend.
