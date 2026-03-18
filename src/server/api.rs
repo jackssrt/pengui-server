@@ -11,8 +11,10 @@ use axum::{
     serve::Listener,
 };
 use tower::Layer;
-use tower_http::cors::{self, CorsLayer};
-use tower_http::trace::TraceLayer;
+use tower_http::{
+    cors::{self, CorsLayer},
+    trace::TraceLayer,
+};
 use tracing::Span;
 
 use crate::server::{

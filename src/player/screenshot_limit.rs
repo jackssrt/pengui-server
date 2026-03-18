@@ -1,9 +1,8 @@
 use anyhow::Result;
 use serde::Serialize;
 
-use crate::{player::traits::FetchForPlayerUuid, server::state::AppState};
-
 use super::ids::PlayerUuid;
+use crate::{player::traits::FetchForPlayerUuid, server::state::AppState};
 
 #[derive(Debug, Clone, PartialEq, Eq, Default, PartialOrd, Ord, Serialize)]
 #[repr(transparent)]
@@ -16,6 +15,7 @@ impl FetchForPlayerUuid for ScreenshotLimit {
         )
         .fetch_optional(&state.database.pool)
         .await?
-        .map(|record| Self(record.screenshotLimit)).unwrap_or_default())
+        .map(|record| Self(record.screenshotLimit))
+        .unwrap_or_default())
     }
 }

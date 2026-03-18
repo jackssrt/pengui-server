@@ -233,9 +233,8 @@ impl Serializer for PacketSerializer {
 }
 #[cfg(test)]
 mod test {
-    use crate::{player::ids::PlayerId, room::client::packet::OutgoingPacket};
-
     use super::*;
+    use crate::{player::ids::PlayerId, room::client::packet::OutgoingPacket};
     #[test]
     fn test() {
         let packets_and_serialized = [

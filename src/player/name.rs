@@ -1,9 +1,10 @@
+use anyhow::Result;
+use serde::Serialize;
+
 use crate::{
     player::{ids::PlayerUuid, traits::MaybeFetchForPlayerUuid},
     server::state::AppState,
 };
-use anyhow::Result;
-use serde::Serialize;
 
 #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Debug, Serialize, Default)]
 #[repr(transparent)]

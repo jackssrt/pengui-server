@@ -1,9 +1,10 @@
-use anyhow::{Result, bail};
 use std::{
     collections::HashSet,
     net::IpAddr,
     sync::{Arc, nonpoison::RwLock},
 };
+
+use anyhow::{Result, bail};
 
 use crate::{
     party::ids::PartyId,

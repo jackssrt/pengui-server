@@ -1,4 +1,3 @@
-use anyhow::Result;
 use std::{
     borrow::ToOwned,
     collections::{BTreeSet, HashSet},
@@ -6,6 +5,8 @@ use std::{
     path::Path,
     sync::Arc,
 };
+
+use anyhow::Result;
 use walkdir::WalkDir;
 
 use crate::{room::ids::MapId, server::config::Config};

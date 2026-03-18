@@ -8,6 +8,7 @@ use anyhow::{Result, anyhow, bail};
 use strum::EnumIs;
 use tokio::sync::{Mutex, mpsc::Sender};
 
+use super::packet::{AddPictureData, AnimationCommand, PictureData};
 use crate::{
     player::Player,
     room::{
@@ -21,8 +22,6 @@ use crate::{
     },
     server::{rooms::Rooms, state::AppState},
 };
-
-use super::packet::{AddPictureData, AnimationCommand, PictureData};
 
 #[derive(EnumIs)]
 enum MovementType {

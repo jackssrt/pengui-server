@@ -301,9 +301,8 @@ impl<'de> Deserializer<'de> for &mut PacketDeserializer<'de> {
 mod test {
     use serde::Deserialize;
 
-    use crate::room::client::{direction::Direction, packet::IncomingPacket};
-
     use super::*;
+    use crate::room::client::{direction::Direction, packet::IncomingPacket};
     #[test]
     fn test() {
         let data_and_deserialized = [

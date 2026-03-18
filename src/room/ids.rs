@@ -18,5 +18,5 @@ impl SwitchId {
 #[repr(transparent)]
 pub struct VariableId(pub u16);
 impl VariableId {
-	pub const TIME_TRIAL_ELAPSED_2KKI: Self = Self(88);
+    pub const TIME_TRIAL_ELAPSED_2KKI: Self = Self(88);
 }

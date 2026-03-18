@@ -1,6 +1,7 @@
-use crate::server::config::Config;
 use anyhow::Result;
 use sqlx::mysql::MySqlPool;
+
+use crate::server::config::Config;
 
 pub struct Database {
     pub pool: MySqlPool,

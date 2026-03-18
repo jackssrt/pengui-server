@@ -1,15 +1,13 @@
+use std::sync::Arc;
+
 use axum::{
     Extension,
     body::Body,
-    extract::Request,
+    extract::{Request, State},
     response::{IntoResponse, Response},
 };
 use futures_util::TryStreamExt;
 use tokio_util::io::{ReaderStream, StreamReader};
-
-use std::sync::Arc;
-
-use axum::extract::State;
 
 use crate::{
     player::ids::PlayerUuid,

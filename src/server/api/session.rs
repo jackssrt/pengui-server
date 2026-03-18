@@ -1,11 +1,10 @@
 use std::{net::IpAddr, sync::Arc};
 
+use anyhow::Result;
 use axum::{
     extract::{State, WebSocketUpgrade, ws::WebSocket},
     response::Response,
 };
-
-use anyhow::Result;
 use axum_client_ip::RightmostXForwardedFor;
 
 use crate::{

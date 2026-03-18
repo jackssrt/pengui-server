@@ -17,8 +17,7 @@ use crate::{
         traits::{FetchForPlayerUuid, MaybeFetchForPlayerUuid},
     },
     server::{
-        api::extractors::authentication::OptionalHeaderAuthentication,
-        error::AppError,
+        api::extractors::authentication::OptionalHeaderAuthentication, error::AppError,
         state::AppState,
     },
 };
