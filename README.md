@@ -75,7 +75,7 @@ this project is bound by the AGPL-3.0 license because it contains a lot of porte
   - [X] setting name
   - [ ] chat messages
   - [ ] expeditions
-  - [ ] setting private mode
+  - [X] setting private mode
   - [ ] player info
   - ...
 - [ ] api (partial)

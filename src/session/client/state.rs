@@ -32,7 +32,7 @@ impl ClientState for SessionState {
             IncomingPacket::SayMap(_) => todo!(),
             IncomingPacket::SayParty(_) => todo!(),
             IncomingPacket::SayGlobal(_) => todo!(),
-            IncomingPacket::SetPrivateMode(_) => todo!(),
+            IncomingPacket::SetPrivateMode(mode) => self.handle_set_private_mode(mode).await,
             IncomingPacket::ClaimExpeditionLocation { name, is_free } => todo!(),
             IncomingPacket::Info() => todo!(),
         }?;
@@ -74,6 +74,13 @@ impl SessionState {
         } {
             client.state.lock().await.broadcast(packet).await?;
         }
+        Ok(())
+    }
+    async fn handle_set_private_mode(&self, mode: u8) -> Result<()> {
+        let player = self.get_player().await?;
+        let mut player = player.write();
+        player.privacy_settings.single_player = mode == 2;
+        player.privacy_settings.private = player.privacy_settings.single_player || mode == 1;
         Ok(())
     }
 }

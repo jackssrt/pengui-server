@@ -70,6 +70,6 @@ impl Players {
                 tokio::spawn(async move {
                     let _ = session_client.send_packet(packet).await;
                 });
-            })
+            });
     }
 }
