@@ -1,11 +1,12 @@
+use bstr::{B, BString};
 use serde::{Serialize, Serializer, ser::Impossible};
 
-use crate::room::client::packet::error::PacketError;
+use super::error::PacketError;
 
 #[derive(Clone)]
 pub struct PacketSerializer {
     pub delimiter: &'static [u8],
-    parts: Vec<Vec<u8>>,
+    parts: Vec<BString>,
 }
 impl PacketSerializer {
     pub const fn new(delimiter: &'static [u8]) -> Self {
@@ -18,14 +19,14 @@ impl PacketSerializer {
 macro_rules! impl_number {
     ($name: ident, $type: ty) => {
         fn $name(self, v: $type) -> Result<Self::Ok, Self::Error> {
-            Ok(v.to_string().into_bytes())
+            Ok(v.to_string().into())
         }
     };
 }
 macro_rules! impl_sub_serializer {
     ($fn: ident, $trait: path) => {
         impl $trait for PacketSerializer {
-            type Ok = Vec<u8>;
+            type Ok = BString;
 
             type Error = PacketError;
             fn $fn<T>(&mut self, value: &T) -> Result<(), Self::Error>
@@ -36,7 +37,7 @@ macro_rules! impl_sub_serializer {
                 Ok(self.parts.push(part))
             }
             fn end(self) -> Result<Self::Ok, Self::Error> {
-                Ok(bstr::join(self.delimiter, self.parts))
+                Ok(bstr::join(self.delimiter, self.parts).into())
             }
         }
     };
@@ -47,7 +48,7 @@ impl_sub_serializer!(serialize_element, serde::ser::SerializeTuple);
 impl_sub_serializer!(serialize_field, serde::ser::SerializeTupleVariant);
 
 impl serde::ser::SerializeStructVariant for PacketSerializer {
-    type Ok = Vec<u8>;
+    type Ok = BString;
 
     type Error = PacketError;
     fn serialize_field<T>(&mut self, key: &'static str, value: &T) -> Result<(), Self::Error>
@@ -59,13 +60,13 @@ impl serde::ser::SerializeStructVariant for PacketSerializer {
         Ok(())
     }
     fn end(self) -> Result<Self::Ok, Self::Error> {
-        Ok(bstr::join(self.delimiter, self.parts))
+        Ok(bstr::join(self.delimiter, self.parts).into())
     }
 }
 pub struct PacketTupleSerializer {}
 pub struct PacketTupleStructSerializer {}
 impl Serializer for PacketSerializer {
-    type Ok = Vec<u8>;
+    type Ok = BString;
 
     type Error = PacketError;
 
@@ -97,11 +98,11 @@ impl Serializer for PacketSerializer {
     impl_number!(serialize_f64, f64);
 
     fn serialize_bool(self, v: bool) -> Result<Self::Ok, Self::Error> {
-        Ok(if v { b"1".to_vec() } else { b"0".to_vec() })
+        Ok(if v { b"1".into() } else { b"0".into() })
     }
 
     fn serialize_str(self, v: &str) -> Result<Self::Ok, Self::Error> {
-        Ok(v.as_bytes().to_vec())
+        Ok(v.as_bytes().into())
     }
     fn serialize_char(self, v: char) -> Result<Self::Ok, Self::Error> {
         let mut buf = [0u8; 4];
@@ -109,11 +110,11 @@ impl Serializer for PacketSerializer {
     }
 
     fn serialize_bytes(self, v: &[u8]) -> Result<Self::Ok, Self::Error> {
-        Ok(v.to_owned())
+        Ok(v.into())
     }
 
     fn serialize_none(self) -> Result<Self::Ok, Self::Error> {
-        Ok(b"null".to_vec())
+        Ok(b"null".into())
     }
 
     fn serialize_some<T>(self, value: &T) -> Result<Self::Ok, Self::Error>
@@ -124,11 +125,11 @@ impl Serializer for PacketSerializer {
     }
 
     fn serialize_unit(self) -> Result<Self::Ok, Self::Error> {
-        Ok(vec![])
+        Ok(BString::default())
     }
 
     fn serialize_unit_struct(self, name: &'static str) -> Result<Self::Ok, Self::Error> {
-        Ok(vec![])
+        Ok(BString::default())
     }
 
     fn serialize_unit_variant(
@@ -162,7 +163,9 @@ impl Serializer for PacketSerializer {
         T: ?Sized + Serialize,
     {
         let delim = self.delimiter;
-        Ok([variant.bytes().collect(), value.serialize(self)?].join(delim))
+        Ok([variant.bytes().collect(), value.serialize(self)?]
+            .join(delim)
+            .into())
     }
 
     fn serialize_tuple(self, len: usize) -> Result<Self::SerializeTuple, Self::Error> {
@@ -203,7 +206,7 @@ impl Serializer for PacketSerializer {
         len: usize,
     ) -> Result<Self::SerializeTupleVariant, Self::Error> {
         let mut parts = Vec::with_capacity(len + 1);
-        parts.push(bstr::B(variant).to_vec());
+        parts.push(B(variant).into());
         Ok(Self::SerializeTupleVariant {
             delimiter: self.delimiter,
             parts,
@@ -217,7 +220,7 @@ impl Serializer for PacketSerializer {
         len: usize,
     ) -> Result<Self::SerializeStructVariant, Self::Error> {
         let mut parts = Vec::with_capacity(len + 1);
-        parts.push(bstr::B(variant).to_vec());
+        parts.push(B(variant).into());
         Ok(Self::SerializeStructVariant {
             delimiter: self.delimiter,
             parts,
@@ -255,8 +258,8 @@ mod test {
             let serializer = PacketSerializer::new(b"\xFF\xFF");
 
             assert_eq!(
-                bstr::BStr::new(&packet.serialize(serializer).unwrap()),
-                bstr::BStr::new(result)
+                packet.serialize(serializer),
+                Ok(BString::new(result.to_vec()))
             );
         }
     }

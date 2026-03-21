@@ -37,13 +37,10 @@ async fn handle_session_websocket(
     auth: OptionalAuthentication,
     ip: IpAddr,
 ) -> Result<()> {
-    let player = Player::new(
-        &state,
-        SessionClient::new(state.clone(), socket).await?,
-        auth.is_authenticated(),
-        auth.take_uuid(),
-        ip,
-    )
-    .await?;
+    let is_authenticated = auth.is_authenticated();
+    let uuid = auth.take_uuid();
+    let (session_client, fut) = SessionClient::new(state.clone(), uuid.clone(), socket);
+    let player = Player::new(&state, session_client, is_authenticated, uuid, ip).await?;
+    fut.await;
     Ok(())
 }

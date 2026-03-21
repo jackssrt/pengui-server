@@ -1,25 +1,20 @@
-use std::{
-    ops::ControlFlow,
-    sync::{Arc, nonpoison::RwLock},
-};
+use std::sync::{Arc, nonpoison::RwLock};
 
-use anyhow::Result;
-use axum::extract::ws::{Message, WebSocket};
+use anyhow::{Context, Result, anyhow};
+use axum::{
+    body::Bytes,
+    extract::ws::{Message, WebSocket},
+};
 use bstr::ByteSlice;
-use tokio::{
-    select,
-    sync::{Mutex, mpsc},
-};
+use tokio::sync::{Mutex, mpsc};
 
+use super::Room;
 use crate::{
+    client::{Client, packet::error::PacketError, state::ClientState},
     player::Player,
-    room::{
-        Room,
-        client::{
-            cryptography::Cryptography,
-            packet::{IncomingPacket, OutgoingPacket, error::PacketError},
-            state::ClientState,
-        },
+    room::client::{
+        packet::{IncomingPacket, OutgoingPacket},
+        state::RoomClientState,
     },
     server::state::AppState,
 };
@@ -30,102 +25,85 @@ pub mod flash;
 pub mod packet;
 pub mod state;
 
-pub struct Client {
-    pub state: Arc<Mutex<ClientState>>,
+pub struct RoomClient {
+    pub state: Arc<Mutex<RoomClientState>>,
     outgoing_sender: mpsc::Sender<OutgoingPacket>,
-    pub cryptography: Arc<std::sync::nonpoison::Mutex<Cryptography>>,
 }
-
-impl Client {
+impl RoomClient {
     pub fn new(
-        state: Arc<AppState>,
+        app_state: Arc<AppState>,
         room: Arc<RwLock<Room>>,
         player: Arc<RwLock<Player>>,
-        mut socket: WebSocket,
-    ) -> (impl Future<Output = ()>, Self) {
-        let (outgoing_sender, mut outgoing_receiver) = mpsc::channel::<OutgoingPacket>(100);
-        let state = ClientState::new(state, player, outgoing_sender.clone(), room);
-        let crypto = Arc::new(std::sync::nonpoison::Mutex::new(Cryptography::new()));
-        #[allow(clippy::unwrap_used)]
-        let fut = {
-            let crypto = crypto.clone();
-            let state = state.clone();
-            async move {
-                loop {
-                    // these share state, which means if we were to split them up into two tasks
-                    // they would just contest the mutex instead of actually doing work any faster
-                    select! {
-                        Some(packet) = outgoing_receiver.recv() => {
-                            if Self::handle_outgoing(&mut socket, packet).await == ControlFlow::Break(()) {
-                                break;
-                            }
-                        },
-                        Some(Ok(Message::Binary(data))) = socket.recv() => {
-                            if Self::handle_incoming(&state, &crypto, &data).await == ControlFlow::Break(()) {
-                                break;
-                            }
-                        },
-                        else => {tracing::error!("broken connection"); break}
-                    }
-                }
-            }
-        };
+        socket: WebSocket,
+    ) -> (Self, impl Future<Output = ()>) {
+        let (sender, recv) = mpsc::channel(16);
+        let state = RoomClientState::new(app_state, room, player, sender.clone());
+        let fut = Self::run(socket, state.clone(), recv);
 
         (
-            fut,
             Self {
                 state,
-                outgoing_sender,
-                cryptography: crypto,
+                outgoing_sender: sender,
             },
+            fut,
         )
     }
-    async fn handle_incoming(
-        state: &Mutex<ClientState>,
-        crypto: &std::sync::nonpoison::Mutex<Cryptography>,
-        data: &[u8],
-    ) -> ControlFlow<()> {
-        let data = {
-            let mut crypto = crypto.lock();
-            let Some(data) = crypto.verify_bytes(data) else {
-                tracing::error!("failed cryptography checks");
-                return ControlFlow::Break(());
-            };
-            data
+}
+
+impl Client for RoomClient {
+    type OutgoingPacket = OutgoingPacket;
+    type State = RoomClientState;
+    async fn handle_incoming(state: &Mutex<Self::State>, message: Message) -> Result<()> {
+        let Message::Binary(data) = message else {
+            return Ok(());
         };
-        // deserialize and do stuff here
+        let data = {
+            let crypto = &mut state.lock().await.cryptography;
+
+            crypto
+                .verify_bytes(&data)
+                .ok_or_else(|| anyhow!("failed cryptography checks"))?
+        };
         for packet_bytes in data.split_str("\u{FFFE}") {
-            let Ok(packet) = IncomingPacket::from_bytes(packet_bytes) else {
-                tracing::error!("failed to deserialize");
-                return ControlFlow::Break(());
-            };
+            let packet = IncomingPacket::from_bytes(packet_bytes)
+                .map_err(|_| anyhow!("failed to deserialize"))?;
             tracing::trace!("handling packet {:?}", packet);
-            if let Err(e) = state.lock().await.handle_incoming_packet(packet).await {
-                tracing::error!("failed to handle packet, trace me to find out which packet, {e}");
-                return ControlFlow::Break(());
-            }
+            state
+                .lock()
+                .await
+                .process_packet(packet)
+                .await
+                .context("failed to handle packet, trace me to find out which")?;
         }
-        ControlFlow::Continue(())
+        Ok(())
     }
-    async fn handle_outgoing(socket: &mut WebSocket, packet: OutgoingPacket) -> ControlFlow<()> {
-        let Ok(bytes) = (if let OutgoingPacket::Multiple(packets) = packet {
+    async fn handle_outgoing(
+        state: &Mutex<Self::State>,
+        socket: &mut WebSocket,
+        packet: OutgoingPacket,
+    ) -> Result<()> {
+        let bytes = (if let OutgoingPacket::Multiple(packets) = packet {
             packets
                 .into_iter()
                 .map(OutgoingPacket::into_bytes)
                 .collect::<Result<Vec<_>, PacketError>>()
-                .map(|x| x.join(bstr::B("\u{FFFE}")))
+                .map(|x| x.join(bstr::B("\u{FFFE}")).into())
         } else {
             packet.into_bytes()
-        }) else {
-            tracing::error!("failed to serialize");
-            return ControlFlow::Break(());
-        };
-        let res = socket.send(Message::Binary(bytes.into())).await;
-        ControlFlow::Continue(())
+        })
+        .context("failed to serialize")?;
+        socket
+            .send(Message::Binary(Bytes::from_owner(bytes)))
+            .await
+            .context("failed to send packet")?;
+        Ok(())
     }
 
-    pub async fn send_packet(&self, packet: OutgoingPacket) -> Result<()> {
+    async fn send_packet(&self, packet: OutgoingPacket) -> Result<()> {
         self.outgoing_sender.send(packet).await?;
         Ok(())
+    }
+    async fn broadcast(&self, packet: Self::OutgoingPacket) -> Result<()> {
+        self.state.lock().await.broadcast(packet).await
     }
 }

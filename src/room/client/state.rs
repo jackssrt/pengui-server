@@ -10,10 +10,12 @@ use tokio::sync::{Mutex, mpsc::Sender};
 
 use super::packet::{AddPictureData, AnimationCommand, PictureData};
 use crate::{
+    client::{Client, state::ClientState},
     player::Player,
     room::{
         Room,
         client::{
+            cryptography::Cryptography,
             direction::Direction,
             flash::Flash,
             packet::{IncomingPacket, OutgoingPacket},
@@ -37,7 +39,7 @@ enum ExtraPictureData {
 
 struct SavedPicture(PictureData, AddPictureData);
 
-pub struct ClientState {
+pub struct RoomClientState {
     state: Arc<AppState>,
     outgoing_sender: Sender<OutgoingPacket>,
     pub room: Arc<RwLock<Room>>,
@@ -53,37 +55,13 @@ pub struct ClientState {
     switch_cache: BTreeMap<SwitchId, bool>,
     variable_cache: BTreeMap<VariableId, u16>,
     saved_picture: Option<SavedPicture>,
+    pub cryptography: Cryptography,
 }
 
-impl ClientState {
-    const MAX_PICTURE_ID: u16 = 1000;
-
-    pub fn new(
-        state: Arc<AppState>,
-        player: Arc<RwLock<Player>>,
-        outgoing_sender: Sender<OutgoingPacket>,
-        room: Arc<RwLock<Room>>,
-    ) -> Arc<Mutex<Self>> {
-        Arc::new(Mutex::new(Self {
-            state,
-            outgoing_sender,
-            room,
-            player,
-            x: 0,
-            y: 0,
-            facing: Direction::default(),
-            speed: 0,
-            sync_coords: false,
-            flash: None,
-            transparency: 0,
-            is_hidden: false,
-            switch_cache: BTreeMap::new(),
-            variable_cache: BTreeMap::new(),
-            saved_picture: None,
-        }))
-    }
-
-    pub async fn handle_incoming_packet(&mut self, packet: IncomingPacket) -> Result<()> {
+impl ClientState for RoomClientState {
+    type IncomingPacket = IncomingPacket;
+    type OutgoingPacket = OutgoingPacket;
+    async fn process_packet(&mut self, packet: Self::IncomingPacket) -> Result<()> {
         match packet {
             IncomingPacket::SwitchRoom(new_id) => {
                 self.handle_switch_room(NonZeroU16::new(new_id)).await
@@ -148,6 +126,64 @@ impl ClientState {
             }
         }?;
         Ok(())
+    }
+    async fn broadcast(&mut self, packet: OutgoingPacket) -> Result<()> {
+        let player = self.player.read();
+        if player.moderation_status.is_banned() {
+            return Err(anyhow!("player is banned"));
+        }
+        let room = self.room.read();
+        room.players
+            .iter()
+            .filter(|other| !player.is_blocked_with(&other.read()))
+            .filter(|other| !other.read().is_privated_to(&player))
+            .filter(|other| player.is_unnamed_player_hidden_by(&other.read()))
+            .filter_map(|other| {
+                let other = other.read();
+                let room_client = &other.room_client;
+
+                room_client
+                    .as_ref()
+                    .map(|room_client| (packet.clone(), room_client.clone()))
+            })
+            .for_each(|(packet, room_client)| {
+                tokio::spawn(async move {
+                    #[allow(clippy::unwrap_used)]
+                    room_client.send_packet(packet).await.unwrap();
+                });
+            });
+
+        Ok(())
+    }
+}
+
+impl RoomClientState {
+    const MAX_PICTURE_ID: u16 = 1000;
+
+    pub fn new(
+        state: Arc<AppState>,
+        room: Arc<RwLock<Room>>,
+        player: Arc<RwLock<Player>>,
+        outgoing_sender: Sender<OutgoingPacket>,
+    ) -> Arc<Mutex<Self>> {
+        Arc::new(Mutex::new(Self {
+            state,
+            outgoing_sender,
+            room,
+            player,
+            x: 0,
+            y: 0,
+            facing: Direction::default(),
+            speed: 0,
+            sync_coords: false,
+            flash: None,
+            transparency: 0,
+            is_hidden: false,
+            switch_cache: BTreeMap::new(),
+            variable_cache: BTreeMap::new(),
+            saved_picture: None,
+            cryptography: Cryptography::new(),
+        }))
     }
 
     async fn handle_switch_room(&self, new_room: Option<NonZeroU16>) -> Result<()> {
@@ -228,7 +264,7 @@ impl ClientState {
         Ok(())
     }
 
-    async fn handle_sprite(&self, sprite: String, sprite_index: u32) -> Result<()> {
+    async fn handle_sprite(&mut self, sprite: String, sprite_index: u32) -> Result<()> {
         if !self.state.assets.is_valid_sprite(&sprite) {
             return Err(anyhow!("invalid sprite"));
         }
@@ -248,7 +284,7 @@ impl ClientState {
         Ok(())
     }
 
-    async fn handle_flash(&self, flash: Flash) -> Result<()> {
+    async fn handle_flash(&mut self, flash: Flash) -> Result<()> {
         let id = self.player.read().id;
         self.broadcast(OutgoingPacket::PlayerFlash {
             player_id: id,
@@ -277,7 +313,7 @@ impl ClientState {
         Ok(())
     }
 
-    async fn handle_transparency(&self, transparency: u8) -> Result<()> {
+    async fn handle_transparency(&mut self, transparency: u8) -> Result<()> {
         let id = self.player.read().id;
         // 0 - 7
         let transparency = transparency.min(7);
@@ -297,7 +333,7 @@ impl ClientState {
         Ok(())
     }
 
-    async fn handle_system(&self, system: String) -> Result<()> {
+    async fn handle_system(&mut self, system: String) -> Result<()> {
         if !self.state.assets.is_valid_system(&system, false) {
             bail!("invalid system")
         }
@@ -312,7 +348,7 @@ impl ClientState {
     }
 
     async fn handle_play_sound_effect(
-        &self,
+        &mut self,
         name: String,
         volume: u8,
         tempo: u16,
@@ -335,42 +371,13 @@ impl ClientState {
         .await?;
         Ok(())
     }
-    async fn handle_battle_animation(&self, id: u64) -> Result<()> {
+    async fn handle_battle_animation(&mut self, id: u64) -> Result<()> {
         if !self.state.config.battle_animation_ids.contains(&id) {
             bail!("invalid battle animation id")
         }
         let player_id = self.player.read().id;
         self.broadcast(OutgoingPacket::BattleAnimation(player_id, id))
             .await?;
-        Ok(())
-    }
-
-    async fn broadcast(&self, packet: OutgoingPacket) -> Result<()> {
-        let player = self.player.read();
-        if player.moderation_status.is_banned() {
-            return Err(anyhow!("player is banned"));
-        }
-        let room = self.room.read();
-        room.players
-            .iter()
-            .filter(|other| !player.is_blocked_with(&other.read()))
-            .filter(|other| !other.read().is_privated_to(&player))
-            .filter(|other| player.is_unnamed_player_hidden_by(&other.read()))
-            .filter_map(|other| {
-                let other = other.read();
-                let room_client = &other.room_client;
-
-                room_client
-                    .as_ref()
-                    .map(|room_client| (packet.clone(), room_client.clone()))
-            })
-            .for_each(|(packet, room_client)| {
-                tokio::spawn(async move {
-                    #[allow(clippy::unwrap_used)]
-                    room_client.send_packet(packet).await.unwrap();
-                });
-            });
-
         Ok(())
     }
 
@@ -488,7 +495,7 @@ impl ClientState {
         Ok(())
     }
 
-    async fn handle_animation_command(&self, command: AnimationCommand) -> Result<()> {
+    async fn handle_animation_command(&mut self, command: AnimationCommand) -> Result<()> {
         // can't hold sync rwlock guard across await points
         let packet = { OutgoingPacket::AnimationCommand(self.player.read().id, command) };
         self.broadcast(packet).await?;

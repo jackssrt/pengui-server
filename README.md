@@ -19,7 +19,7 @@ or specify path to config using `--config`
 right now it contains all the fields from ynoserver, most of which aren't used yet
 just leave them empty or with the bogus values from the development config
 1. run the produced executable
-1. use or create an nginx config that routes traffic to the created socket in `/socket/{game_name}.socket`  
+1. use or create an nginx config that routes traffic to the created socket in `/sockets/{game_name}.socket`  
 where `{game_name}` is the game_name field of the config
 1. optional - accept docker and just start using that please
 
@@ -70,8 +70,13 @@ this project is bound by the AGPL-3.0 license because it contains a lot of porte
   - these sync events require a lot of supporting infrastructure, which i haven't made yet
   - [X] animation commands
 - [ ] session websocket
-  - [ ] client handler (`needs a refactor`)
-  - [ ] player count (`buggy`)
+  - [X] client handler
+  - [X] player count
+  - [X] setting name
+  - [ ] chat messages
+  - [ ] expeditions
+  - [ ] setting private mode
+  - [ ] player info
   - ...
 - [ ] api (partial)
   - [ ] friends

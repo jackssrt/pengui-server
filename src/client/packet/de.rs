@@ -1,23 +1,23 @@
 use std::collections::VecDeque;
 
-use bstr::ByteSlice;
+use bstr::{BStr, ByteSlice};
 use serde::Deserializer;
 
-use crate::room::client::packet::error::{self, PacketError};
+use super::error::PacketError;
 
 pub struct PacketDeserializer<'de> {
-    data: VecDeque<&'de bstr::BStr>,
+    data: VecDeque<&'de BStr>,
 }
 impl<'de> PacketDeserializer<'de> {
-    pub fn new(data: &'de bstr::BStr, delimiter: &'static bstr::BStr) -> Self {
+    pub fn new(data: &'de BStr, delimiter: &'static BStr) -> Self {
         Self {
-            data: data.split_str(delimiter).map(bstr::BStr::new).collect(),
+            data: data.split_str(delimiter).map(BStr::new).collect(),
         }
     }
-    fn take_next_part(&mut self) -> Result<&'de bstr::BStr, PacketError> {
+    fn take_next_part(&mut self) -> Result<&'de BStr, PacketError> {
         self.data.pop_front().ok_or(PacketError::Incomplete)
     }
-    fn peek_next_part(&self) -> Option<&&'de bstr::BStr> {
+    fn peek_next_part(&self) -> Option<&&'de BStr> {
         self.data.front()
     }
     fn take_next_as_str(&mut self) -> Result<&'de str, PacketError> {
@@ -108,7 +108,7 @@ macro_rules! impl_number {
 }
 
 impl<'de> Deserializer<'de> for &mut PacketDeserializer<'de> {
-    type Error = error::PacketError;
+    type Error = PacketError;
 
     fn deserialize_any<V>(self, visitor: V) -> Result<V::Value, Self::Error>
     where
@@ -324,8 +324,8 @@ mod test {
                 PacketDeserializer::new(bstr::BStr::new(*data), b"\xFF\xFF".into());
 
             assert_eq!(
-                IncomingPacket::deserialize(&mut deserializer).unwrap(),
-                *result
+                IncomingPacket::deserialize(&mut deserializer),
+                Ok(result).cloned()
             );
         }
     }

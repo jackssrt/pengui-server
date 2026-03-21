@@ -17,7 +17,9 @@
 use anyhow::Result;
 
 use crate::server::start;
+
 mod chat;
+mod client;
 mod locations;
 mod party;
 mod player;

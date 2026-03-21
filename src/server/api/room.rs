@@ -12,10 +12,11 @@ use serde::Deserialize;
 use tracing::instrument;
 
 use crate::{
+    client::Client,
     player::Player,
     room::{
         Room,
-        client::{Client, packet::OutgoingPacket},
+        client::{RoomClient, packet::OutgoingPacket},
     },
     server::{
         api::extractors::authentication::OptionalQueryAuthentication, error::AppError,
@@ -75,16 +76,16 @@ async fn handle_connection(
         player.read().uuid.0,
         room.read().id
     );
-    let (fut, client) = Client::new(state, room.clone(), player.clone(), ws);
+    let (client, fut) = RoomClient::new(state, room.clone(), player.clone(), ws);
     room.write().players.push(player.clone());
     let id = room.read().id;
     client.send_packet(OutgoingPacket::RoomId(id)).await?;
+    let key = client.state.lock().await.cryptography.key;
     let packet = {
         let player = player.read();
-        let crypto = client.cryptography.lock();
         OutgoingPacket::Sync {
             id: player.id,
-            key: crypto.key,
+            key,
             uuid: player.uuid.clone(),
             rank: player.rank.clone(),
             is_authenticated,

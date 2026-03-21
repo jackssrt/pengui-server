@@ -6,9 +6,13 @@ use std::{
     },
 };
 
-use crate::player::{
-    Player,
-    ids::{PlayerId, PlayerUuid},
+use crate::{
+    client::Client,
+    player::{
+        Player,
+        ids::{PlayerId, PlayerUuid},
+    },
+    session,
 };
 #[derive(Default)]
 pub struct Players {
@@ -55,5 +59,17 @@ impl Players {
         let uuid = uuids.get(id.0)?.as_ref()?;
         let players = self.players.lock();
         players.get(uuid).cloned()
+    }
+    pub async fn broadcast_session_packet(&self, packet: session::client::packet::OutgoingPacket) {
+        self.players
+            .lock()
+            .values()
+            .map(|player| player.read().session_client.clone())
+            .for_each(|session_client| {
+                let packet = packet.clone();
+                tokio::spawn(async move {
+                    let _ = session_client.send_packet(packet).await;
+                });
+            })
     }
 }

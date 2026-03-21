@@ -1,8 +1,10 @@
 use anyhow::Result;
+use bstr::BString;
 use serde::{Deserialize, Serialize};
 use serde_repr::{Deserialize_repr, Serialize_repr};
 
 use crate::{
+    client::packet::{de::PacketDeserializer, error::PacketError, ser::PacketSerializer},
     player::{
         badge::BadgeName,
         ids::{PlayerId, PlayerUuid},
@@ -10,17 +12,10 @@ use crate::{
         rank::Rank,
     },
     room::{
-        client::{
-            direction::Direction,
-            flash::Flash,
-            packet::{de::PacketDeserializer, ser::PacketSerializer},
-        },
+        client::{direction::Direction, flash::Flash},
         ids::{MapId, VariableId},
     },
 };
-pub mod de;
-pub mod error;
-pub mod ser;
 
 #[derive(Deserialize, Debug, PartialEq, Eq, Clone, Serialize)]
 #[serde(deny_unknown_fields)]
@@ -246,12 +241,17 @@ pub enum OutgoingPacket {
         picture_data: PictureData,
         duration: u64,
     },
+    #[serde(rename = "name")]
+    Name {
+        player_id: PlayerId,
+        name: String,
+    },
 }
 
 static DELIMITER: &[u8] = b"\xEF\xBF\xBF";
 
 impl OutgoingPacket {
-    pub fn into_bytes(self) -> Result<Vec<u8>, error::PacketError> {
+    pub fn into_bytes(self) -> Result<BString, PacketError> {
         self.serialize(PacketSerializer::new(DELIMITER))
     }
 }
