@@ -1,10 +1,23 @@
 use std::sync::{Arc, nonpoison::RwLock};
 
 use anyhow::{Result, anyhow};
+use serde::Serialize;
+use serde_json::json;
+use tokio::sync::mpsc::Sender;
 
 use crate::{
     client::state::ClientState,
-    player::{Player, ids::PlayerUuid, name::PlayerName},
+    player::{
+        Player,
+        badge::BadgeName,
+        badge_slots::BadgeSlots,
+        ids::PlayerUuid,
+        medal::Medals,
+        name::PlayerName,
+        rank::Rank,
+        screenshot_limit::{self, ScreenshotLimit},
+        traits::FetchForPlayerUuid,
+    },
     room,
     server::state::AppState,
     session::client::packet::{IncomingPacket, OutgoingPacket},
@@ -14,11 +27,20 @@ use crate::{
 pub struct SessionState {
     state: Arc<AppState>,
     uuid: PlayerUuid,
+    outgoing_sender: Sender<OutgoingPacket>,
 }
 
 impl SessionState {
-    pub const fn new(state: Arc<AppState>, uuid: PlayerUuid) -> Self {
-        Self { state, uuid }
+    pub const fn new(
+        state: Arc<AppState>,
+        uuid: PlayerUuid,
+        outgoing_sender: Sender<OutgoingPacket>,
+    ) -> Self {
+        Self {
+            state,
+            uuid,
+            outgoing_sender,
+        }
     }
 }
 
@@ -34,13 +56,28 @@ impl ClientState for SessionState {
             IncomingPacket::SayGlobal(_) => todo!(),
             IncomingPacket::SetPrivateMode(mode) => self.handle_set_private_mode(mode).await,
             IncomingPacket::ClaimExpeditionLocation { name, is_free } => todo!(),
-            IncomingPacket::Info() => todo!(),
+            IncomingPacket::Info() => self.handle_info().await,
         }?;
         Ok(())
     }
     async fn broadcast(&mut self, packet: Self::OutgoingPacket) -> Result<()> {
         todo!()
     }
+    async fn send_packet(&mut self, packet: Self::OutgoingPacket) -> Result<()> {
+        Ok(self.outgoing_sender.send(packet).await?)
+    }
+}
+#[derive(Serialize)]
+#[serde(rename_all = "PascalCase")]
+struct PlayerInfo {
+    uuid: PlayerUuid,
+    name: Option<PlayerName>,
+    rank: Rank,
+    badge: Option<BadgeName>,
+    #[serde(flatten)]
+    badge_slots: BadgeSlots,
+    screenshot_limit: ScreenshotLimit,
+    medals: Medals,
 }
 
 impl SessionState {
@@ -81,6 +118,29 @@ impl SessionState {
         let mut player = player.write();
         player.privacy_settings.single_player = mode == 2;
         player.privacy_settings.private = player.privacy_settings.single_player || mode == 1;
+        Ok(())
+    }
+
+    async fn handle_info(&mut self) -> Result<()> {
+        let badge_slots = BadgeSlots::fetch_for_player_uuid(&self.state, &self.uuid).await?;
+        let screenshot_limit =
+            ScreenshotLimit::fetch_for_player_uuid(&self.state, &self.uuid).await?;
+        let player = self.get_player().await?;
+        self.send_packet({
+            let player = player.read();
+            let info = PlayerInfo {
+                name: player.name.clone(),
+                badge: player.badge.clone(),
+                badge_slots,
+                medals: player.medals.clone(),
+                rank: player.rank.clone(),
+                screenshot_limit,
+                uuid: self.uuid.clone(),
+            };
+            let output = serde_json::to_string(&info)?;
+            OutgoingPacket::Info(output)
+        })
+        .await?;
         Ok(())
     }
 }

@@ -55,6 +55,7 @@ where
         packet: Self::OutgoingPacket,
     ) -> Result<()>;
 
+    /// Forward to [`Self::State`] to send this [`Client`] a packet
     async fn send_packet(&self, packet: Self::OutgoingPacket) -> Result<()>;
     /// Forward to [`Self::State`] to send other [`Client`]s except this one a packet
     async fn broadcast(&self, packet: Self::OutgoingPacket) -> Result<()>;

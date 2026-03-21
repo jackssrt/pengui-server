@@ -7,4 +7,7 @@ pub trait ClientState {
 
     /// send a [`Self::OutgoingPacket`] to other Clients except for this one
     async fn broadcast(&mut self, packet: Self::OutgoingPacket) -> Result<()>;
+
+    /// send a [`Self::OutgoingPacket`] to this client
+    async fn send_packet(&mut self, packet: Self::OutgoingPacket) -> Result<()>;
 }

@@ -19,7 +19,6 @@ pub mod packet;
 pub mod state;
 
 pub struct SessionClient {
-    outgoing_sender: mpsc::Sender<OutgoingPacket>,
     state: Arc<Mutex<SessionState>>,
 }
 impl Client for SessionClient {
@@ -44,7 +43,7 @@ impl Client for SessionClient {
         Ok(())
     }
     async fn send_packet(&self, packet: Self::OutgoingPacket) -> Result<()> {
-        Ok(self.outgoing_sender.send(packet).await?)
+        self.state.lock().await.send_packet(packet).await
     }
     async fn broadcast(&self, packet: Self::OutgoingPacket) -> Result<()> {
         let mut state = self.state.lock().await;
@@ -57,15 +56,13 @@ impl SessionClient {
         uuid: PlayerUuid,
         websocket: WebSocket,
     ) -> (Self, impl Future<Output = ()>) {
-        let state = Arc::new(Mutex::new(SessionState::new(app_state, uuid)));
         let (outgoing_sender, outgoing_receiver) = mpsc::channel(16);
+        let state = Arc::new(Mutex::new(SessionState::new(
+            app_state,
+            uuid,
+            outgoing_sender,
+        )));
         let fut = Self::run(websocket, state.clone(), outgoing_receiver);
-        (
-            Self {
-                outgoing_sender,
-                state,
-            },
-            fut,
-        )
+        (Self { state }, fut)
     }
 }

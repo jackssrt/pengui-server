@@ -27,7 +27,6 @@ pub mod state;
 
 pub struct RoomClient {
     pub state: Arc<Mutex<RoomClientState>>,
-    outgoing_sender: mpsc::Sender<OutgoingPacket>,
 }
 impl RoomClient {
     pub fn new(
@@ -37,16 +36,10 @@ impl RoomClient {
         socket: WebSocket,
     ) -> (Self, impl Future<Output = ()>) {
         let (sender, recv) = mpsc::channel(16);
-        let state = RoomClientState::new(app_state, room, player, sender.clone());
+        let state = RoomClientState::new(app_state, room, player, sender);
         let fut = Self::run(socket, state.clone(), recv);
 
-        (
-            Self {
-                state,
-                outgoing_sender: sender,
-            },
-            fut,
-        )
+        (Self { state }, fut)
     }
 }
 
@@ -100,8 +93,7 @@ impl Client for RoomClient {
     }
 
     async fn send_packet(&self, packet: OutgoingPacket) -> Result<()> {
-        self.outgoing_sender.send(packet).await?;
-        Ok(())
+        self.state.lock().await.send_packet(packet).await
     }
     async fn broadcast(&self, packet: Self::OutgoingPacket) -> Result<()> {
         self.state.lock().await.broadcast(packet).await

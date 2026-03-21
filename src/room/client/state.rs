@@ -155,6 +155,9 @@ impl ClientState for RoomClientState {
 
         Ok(())
     }
+    async fn send_packet(&mut self, packet: Self::OutgoingPacket) -> Result<()> {
+        Ok(self.outgoing_sender.send(packet).await?)
+    }
 }
 
 impl RoomClientState {
