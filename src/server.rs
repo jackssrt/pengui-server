@@ -6,6 +6,7 @@ use tokio::net::UnixListener;
 use crate::{
     chat::history::init_history,
     server::{config::Config, state::AppState},
+    session::init_session,
 };
 
 pub mod api;
@@ -54,6 +55,7 @@ pub async fn start() -> Result<()> {
     let state = Arc::new(AppState::setup().await?);
 
     init_history(&state);
+    init_session(state.clone());
 
     setup_router(state).await?;
 
