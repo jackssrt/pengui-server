@@ -6,7 +6,7 @@ use serde_json::json;
 use tokio::sync::mpsc::Sender;
 
 use crate::{
-    client::state::ClientState,
+    client::{Client, state::ClientState},
     player::{
         Player,
         badge::BadgeName,
@@ -109,7 +109,7 @@ impl SessionState {
             })
             .flatten()
         } {
-            client.state.lock().await.broadcast(packet).await?;
+            client.broadcast(packet).await?;
         }
         Ok(())
     }
