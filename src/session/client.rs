@@ -29,7 +29,7 @@ impl Client for SessionClient {
             return Ok(());
         };
         let packet = IncomingPacket::from_bstr(BStr::new(data.as_bytes()))?;
-        tracing::trace!("handling incoming packet {:?}", packet);
+        tracing::trace!("<- {:?}", packet);
         state.lock().await.process_packet(packet).await?;
         Ok(())
     }
@@ -38,7 +38,7 @@ impl Client for SessionClient {
         socket: &mut WebSocket,
         packet: Self::OutgoingPacket,
     ) -> Result<()> {
-        tracing::trace!("handling outgoing packet {:?}", packet);
+        tracing::trace!("-> {:?}", packet);
         let data = packet.into_bstring()?;
         let data = data.to_vec().try_into()?;
         socket.send(Message::Text(data)).await?;
