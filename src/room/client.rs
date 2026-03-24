@@ -35,7 +35,7 @@ impl RoomClient {
         player: Arc<RwLock<Player>>,
         socket: WebSocket,
     ) -> (Self, impl Future<Output = ()>) {
-        let (sender, recv) = mpsc::channel(16);
+        let (sender, recv) = mpsc::channel(1000);
         let state = RoomClientState::new(app_state, room, player, sender);
         let fut = Self::run(socket, state.clone(), recv);
 
@@ -58,15 +58,16 @@ impl Client for RoomClient {
                 .ok_or_else(|| anyhow!("failed cryptography checks"))?
         };
         for packet_bytes in data.split_str("\u{FFFE}") {
-            let packet = IncomingPacket::from_bytes(packet_bytes)
-                .map_err(|_| anyhow!("failed to deserialize"))?;
-            tracing::trace!("handling packet {:?}", packet);
+            let packet = IncomingPacket::from_bytes(packet_bytes).with_context(|| {
+                format!("failed to deserialize: {}", packet_bytes.to_str_lossy())
+            })?;
+            tracing::trace!("<- {:?}", packet);
             state
                 .lock()
                 .await
                 .process_packet(packet)
                 .await
-                .context("failed to handle packet, trace me to find out which")?;
+                .context("failed to handle incoming packet, trace me to find out which")?;
         }
         Ok(())
     }
@@ -75,6 +76,7 @@ impl Client for RoomClient {
         socket: &mut WebSocket,
         packet: OutgoingPacket,
     ) -> Result<()> {
+        tracing::trace!("-> {:?}", packet);
         let bytes = (if let OutgoingPacket::Multiple(packets) = packet {
             packets
                 .into_iter()

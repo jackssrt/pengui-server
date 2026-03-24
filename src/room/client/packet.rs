@@ -67,14 +67,14 @@ pub enum AnimationCommand {
 #[derive(Deserialize, Debug, PartialEq, Eq, Clone)]
 #[serde(deny_unknown_fields)]
 pub enum IncomingPacket {
+    #[serde(rename = "m")]
+    Move { x: i16, y: i16 },
+    #[serde(rename = "tp")]
+    Teleport { x: i16, y: i16 },
+    #[serde(rename = "jmp")]
+    Jump { x: i16, y: i16 },
     #[serde(rename = "sr")]
     SwitchRoom(u16),
-    #[serde(rename = "m")]
-    Move { x: u16, y: u16 },
-    #[serde(rename = "tp")]
-    Teleport { x: u16, y: u16 },
-    #[serde(rename = "jmp")]
-    Jump { x: u16, y: u16 },
     #[serde(rename = "f")]
     ChangeFacingDirection(Direction),
     #[serde(rename = "spd")]
@@ -128,8 +128,6 @@ pub enum IncomingPacket {
 }
 impl IncomingPacket {
     pub fn from_bytes(bytes: &[u8]) -> Result<Self> {
-        tracing::info!("deserializing {:x?}", bytes);
-        tracing::info!("as str {}", bstr::BStr::new(bytes));
         let mut deserializer = PacketDeserializer::new(bytes.into(), b"\xef\xbf\xbf".into());
         Ok(Self::deserialize(&mut deserializer)?)
     }
@@ -211,10 +209,7 @@ pub enum OutgoingPacket {
     #[serde(rename = "tr")]
     ChangeTransparency(PlayerId, u8),
     #[serde(rename = "h")]
-    ChangeSpriteVisibility {
-        player_id: PlayerId,
-        is_hidden: bool,
-    },
+    ChangeSpriteVisibility(PlayerId, bool),
     #[serde(rename = "sys")]
     ChangeSystemGraphic(PlayerId, String),
     #[serde(rename = "se")]
@@ -245,6 +240,19 @@ pub enum OutgoingPacket {
     Name {
         player_id: PlayerId,
         name: String,
+    },
+    #[serde(rename = "c")]
+    Connect {
+        player_id: PlayerId,
+        player_uuid: PlayerUuid,
+        rank: Rank,
+        is_authenticated: bool,
+        badge: Option<BadgeName>,
+        medals: Medals,
+    },
+    #[serde(rename = "d")]
+    Disconnection {
+        player_id: PlayerId,
     },
 }
 

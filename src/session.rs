@@ -1,6 +1,5 @@
 use std::{sync::Arc, time::Duration};
 
-use axum::extract::ws::Message;
 
 use crate::{server::state::AppState, session::client::packet::OutgoingPacket};
 

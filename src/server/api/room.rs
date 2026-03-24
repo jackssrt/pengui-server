@@ -64,6 +64,7 @@ pub async fn handle_room(
     }),))
 }
 
+#[instrument(skip_all, fields(player_uuid = ?player.read().uuid.0))]
 async fn handle_connection(
     state: Arc<AppState>,
     ws: WebSocket,
@@ -72,14 +73,29 @@ async fn handle_connection(
     is_authenticated: bool,
 ) -> Result<()> {
     tracing::info!(
-        "new room connection by {:?} to room {:?}",
+        "new room connection by {:?} ({}) to room {:?}",
         player.read().uuid.0,
+        player.read().ip,
         room.read().id
     );
     let (client, fut) = RoomClient::new(state, room.clone(), player.clone(), ws);
-    room.write().players.push(player.clone());
-    let id = room.read().id;
-    client.send_packet(OutgoingPacket::RoomId(id)).await?;
+    let client = Arc::new(client);
+    player.write().room_client = Some(client.clone());
+
+    send_sync_packet(&player, is_authenticated, &client).await?;
+    client.state.lock().await.join_room().await?;
+    fut.await;
+    client.state.lock().await.leave_current_room().await?;
+
+    tracing::info!("goodbye");
+    Ok(())
+}
+
+async fn send_sync_packet(
+    player: &RwLock<Player>,
+    is_authenticated: bool,
+    client: &RoomClient,
+) -> Result<()> {
     let key = client.state.lock().await.cryptography.key;
     let packet = {
         let player = player.read();
@@ -94,7 +110,5 @@ async fn handle_connection(
         }
     };
     client.send_packet(packet).await?;
-    fut.await;
-    tracing::info!("goodbye");
     Ok(())
 }

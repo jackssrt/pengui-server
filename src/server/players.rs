@@ -31,7 +31,7 @@ impl Players {
                 Some(_) => None,
             })
             // allocate a new id
-            .unwrap_or(PlayerId(ids_to_uuids.len()))
+            .unwrap_or_else(|| PlayerId(ids_to_uuids.len() + 1))
     }
     pub fn insert_new(
         players: &mut HashMap<PlayerUuid, Arc<RwLock<Player>>>,

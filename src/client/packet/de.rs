@@ -10,6 +10,7 @@ pub struct PacketDeserializer<'de> {
 }
 impl<'de> PacketDeserializer<'de> {
     pub fn new(data: &'de BStr, delimiter: &'static BStr) -> Self {
+        tracing::trace!("deserializing {:?}", data);
         Self {
             data: data.split_str(delimiter).map(BStr::new).collect(),
         }
@@ -114,7 +115,7 @@ impl<'de> Deserializer<'de> for &mut PacketDeserializer<'de> {
     where
         V: serde::de::Visitor<'de>,
     {
-        unimplemented!()
+        unimplemented!("deserialize_any is not supported by PacketDeserializer")
     }
 
     fn deserialize_bool<V>(self, visitor: V) -> Result<V::Value, Self::Error>
@@ -307,21 +308,25 @@ mod test {
     fn test() {
         let data_and_deserialized = [
             (
-                bstr::B(b"jmp\xff\xff20\xff\xff1"),
+                bstr::B("jmp\u{ffff}20\u{ffff}1"),
                 IncomingPacket::Jump { x: 20, y: 1 },
             ),
             (
-                bstr::B(b"tr\xff\xff50"),
+                bstr::B("tr\u{ffff}50"),
                 IncomingPacket::ChangeTransparency(50),
             ),
             (
-                bstr::B(b"f\xff\xff0"),
+                bstr::B("f\u{ffff}0"),
                 IncomingPacket::ChangeFacingDirection(Direction::Up),
+            ),
+            (
+                bstr::B("m\u{ffff}11\u{ffff}6"),
+                IncomingPacket::Move { x: 11, y: 6 },
             ),
         ];
         for (data, result) in &data_and_deserialized {
             let mut deserializer =
-                PacketDeserializer::new(bstr::BStr::new(*data), b"\xFF\xFF".into());
+                PacketDeserializer::new(bstr::BStr::new(*data), bstr::B("\u{FFFF}").into());
 
             assert_eq!(
                 IncomingPacket::deserialize(&mut deserializer),

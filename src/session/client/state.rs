@@ -2,20 +2,13 @@ use std::sync::{Arc, nonpoison::RwLock};
 
 use anyhow::{Result, anyhow};
 use serde::Serialize;
-use serde_json::json;
 use tokio::sync::mpsc::Sender;
 
 use crate::{
     client::{Client, state::ClientState},
     player::{
-        Player,
-        badge::BadgeName,
-        badge_slots::BadgeSlots,
-        ids::PlayerUuid,
-        medal::Medals,
-        name::PlayerName,
-        rank::Rank,
-        screenshot_limit::{self, ScreenshotLimit},
+        Player, badge::BadgeName, badge_slots::BadgeSlots, ids::PlayerUuid, medal::Medals,
+        name::PlayerName, rank::Rank, screenshot_limit::ScreenshotLimit,
         traits::FetchForPlayerUuid,
     },
     room,
@@ -50,13 +43,13 @@ impl ClientState for SessionState {
     async fn process_packet(&mut self, packet: Self::IncomingPacket) -> Result<()> {
         match packet {
             IncomingPacket::SetName(name) => self.handle_name(name).await,
-            IncomingPacket::GetExpeditions => todo!(),
-            IncomingPacket::SayMap(_) => todo!(),
-            IncomingPacket::SayParty(_) => todo!(),
-            IncomingPacket::SayGlobal(_) => todo!(),
             IncomingPacket::SetPrivateMode(mode) => self.handle_set_private_mode(mode).await,
             IncomingPacket::ClaimExpeditionLocation { name, is_free } => todo!(),
             IncomingPacket::Info() => self.handle_info().await,
+            x => {
+                tracing::debug!("unimplemented session packet: {:?}", x);
+                Ok(())
+            }
         }?;
         Ok(())
     }
@@ -116,8 +109,8 @@ impl SessionState {
     async fn handle_set_private_mode(&self, mode: u8) -> Result<()> {
         let player = self.get_player().await?;
         let mut player = player.write();
-        player.privacy_settings.single_player = mode == 2;
-        player.privacy_settings.private = player.privacy_settings.single_player || mode == 1;
+        player.privacy_settings.singleplayer = mode == 2;
+        player.privacy_settings.private = player.privacy_settings.singleplayer || mode == 1;
         Ok(())
     }
 

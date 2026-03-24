@@ -3,7 +3,7 @@
 #[allow(clippy::struct_excessive_bools)]
 pub struct PrivacySettings {
     pub private: bool,
-    pub single_player: bool,
+    pub singleplayer: bool,
     pub should_hide_location: bool,
     pub hide_unnamed_players: bool,
 }
@@ -13,7 +13,7 @@ impl PrivacySettings {
     pub const fn or(&self, other: &Self) -> Self {
         Self {
             private: self.private || other.private,
-            single_player: self.single_player || other.single_player,
+            singleplayer: self.singleplayer || other.singleplayer,
             hide_unnamed_players: self.hide_unnamed_players || other.hide_unnamed_players,
             should_hide_location: self.should_hide_location || other.should_hide_location,
         }

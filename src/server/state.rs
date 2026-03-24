@@ -31,7 +31,7 @@ impl AppState {
         );
 
         // Logging
-        let (file_logger, _gaurd) = tracing_appender::non_blocking(
+        let (file_logger, _guard) = tracing_appender::non_blocking(
             #[allow(clippy::expect_used)]
             tracing_appender::rolling::Builder::new()
                 .filename_prefix("pengui-server")
@@ -39,6 +39,11 @@ impl AppState {
                 .build(format!("logs/{}", config.game_name))
                 .expect("failed to build logger"),
         );
+        // disable timestamps in debug mode
+        #[cfg(debug_assertions)]
+        let stdout_logger = tracing_subscriber::fmt::layer().without_time();
+        #[cfg(not(debug_assertions))]
+        let stdout_logger = tracing_subscriber::fmt::layer();
 
         tracing_subscriber::registry()
             .with(
@@ -46,13 +51,13 @@ impl AppState {
                     // axum logs rejections from built-in extractors with the `axum::rejection`
                     // target, at `TRACE` level. `axum::rejection=trace` enables showing those events
                     format!(
-                        "{}=debug,tower_http=debug,axum::rejection=trace",
+                        "{}=info,tower_http=debug,axum::rejection=trace",
                         env!("CARGO_CRATE_NAME")
                     )
                     .into()
                 }),
             )
-            .with(tracing_subscriber::fmt::layer())
+            .with(stdout_logger)
             .with(tracing_subscriber::fmt::layer().with_writer(file_logger))
             .init();
 

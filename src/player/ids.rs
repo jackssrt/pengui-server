@@ -60,6 +60,7 @@ impl Display for PlayerUuid {
         write!(f, "{}", self.0)
     }
 }
-#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Hash, Default, Serialize, Copy, Debug)]
+#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Hash, Serialize, Copy, Debug, Default)]
 #[repr(transparent)]
+// these are 0-index everywhere. i checked.
 pub struct PlayerId(pub usize);

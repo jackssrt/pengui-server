@@ -125,12 +125,12 @@ impl Player {
     pub fn is_privated_to(&self, other: &Self) -> bool {
         let PrivacySettings {
             private,
-            single_player,
+            singleplayer,
             ..
         } = self.privacy_settings.or(&other.privacy_settings);
         let is_different_party = other.party_id.is_none() || self.party_id != other.party_id;
         let are_not_friends = !self.online_friends.contains(&other.uuid);
-        (private) && ((single_player) || is_different_party && are_not_friends)
+        (private) && ((singleplayer) || is_different_party && are_not_friends)
     }
     pub fn is_blocked_with(&self, other: &Self) -> bool {
         self.blocked_users.contains(&other.uuid) || other.blocked_users.contains(&other.uuid)

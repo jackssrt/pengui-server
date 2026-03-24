@@ -37,10 +37,20 @@ where
                         break;
                     }
                 },
-                Some(Ok(message)) = socket.recv() => {
-                    if let Err(e) = Self::handle_incoming(&state, message).await {
-                        tracing::error!("error handling incoming client packet, {}", e);
-                        break;
+                message = socket.recv() => {
+                    match message {
+                        Some(Ok(message)) => if let Err(e) = Self::handle_incoming(&state, message).await {
+                            tracing::error!("error handling incoming client packet, {}", e);
+                            break;
+                        }
+                        Some(Err(e)) => {
+                            tracing::error!("error receiving client packet, {}", e);
+                            break;
+                        },
+                        None => {
+                            tracing::error!("client closed connection");
+                            break;
+                        }
                     }
                 },
                 else => {tracing::error!("broken connection"); break}

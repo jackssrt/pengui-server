@@ -11,7 +11,7 @@ pub mod ids;
 pub mod minigame;
 pub struct Room {
     pub id: MapId,
-    pub singleplayer: bool,
+    pub is_singleplayer: bool,
     pub players: Vec<Arc<RwLock<Player>>>,
     // TODO
     // pub conditions: Vec<Condition>,
@@ -21,7 +21,7 @@ impl Room {
     pub const fn new(id: MapId) -> Self {
         Self {
             players: Vec::new(),
-            singleplayer: false,
+            is_singleplayer: false,
             minigame: None,
             id,
         }
