@@ -64,7 +64,7 @@ pub async fn handle_room(
     }),))
 }
 
-#[instrument(skip_all, fields(player_uuid = ?player.read().uuid.0))]
+#[instrument(skip_all, fields(uuid = player.read().uuid.0), name = "room ws")]
 async fn handle_connection(
     state: Arc<AppState>,
     ws: WebSocket,

@@ -6,12 +6,12 @@ use axum::{
     response::Response,
 };
 use axum_client_ip::RightmostXForwardedFor;
+use tracing::instrument;
 
 use crate::{
-    player::Player,
+    player::{Player, ids::PlayerUuid},
     server::{
-        api::extractors::authentication::{OptionalAuthentication, OptionalQueryAuthentication},
-        error::AppError,
+        api::extractors::authentication::OptionalQueryAuthentication, error::AppError,
         state::AppState,
     },
     session::client::SessionClient,
@@ -25,20 +25,21 @@ pub async fn handle_session(
     RightmostXForwardedFor(ip): RightmostXForwardedFor,
 ) -> Result<Response, AppError> {
     Ok(ws.on_upgrade(async move |socket| {
-        if let Err(e) = handle_session_websocket(socket, state, auth, ip).await {
+        if let Err(e) =
+            handle_connection(socket, state, auth.is_authenticated(), auth.take_uuid(), ip).await
+        {
             tracing::error!("session handler error {e:?}");
         }
     }))
 }
-
-async fn handle_session_websocket(
+#[instrument(skip_all, fields(uuid = uuid.0), name = "session ws")]
+async fn handle_connection(
     socket: WebSocket,
     state: Arc<AppState>,
-    auth: OptionalAuthentication,
+    is_authenticated: bool,
+    uuid: PlayerUuid,
     ip: IpAddr,
 ) -> Result<()> {
-    let is_authenticated = auth.is_authenticated();
-    let uuid = auth.take_uuid();
     let (session_client, fut) = SessionClient::new(state.clone(), uuid.clone(), socket);
     let player = Player::new(&state, session_client, is_authenticated, uuid, ip).await?;
     fut.await;
