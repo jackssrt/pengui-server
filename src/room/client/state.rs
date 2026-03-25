@@ -136,29 +136,30 @@ impl ClientState for RoomClientState {
         if player.moderation_status.is_banned() {
             return Err(anyhow!("player is banned"));
         }
-        let room = self.room.read();
-        room.players
-            .iter()
-            .filter(|other| player.uuid != other.read().uuid)
-            .filter(|other| {
-                !player.is_blocked_with(&other.read())
-                    && !other.read().is_privated_to(&player)
-                    && !player.is_unnamed_player_hidden_by(&other.read())
-            })
-            .filter_map(|other| {
-                let other = other.read();
-                let room_client = &other.room_client;
+        self.room.with(|room| {
+            room.players
+                .iter()
+                .filter(|other| player.uuid != other.read().uuid)
+                .filter(|other| {
+                    !player.is_blocked_with(&other.read())
+                        && !other.read().is_privated_to(&player)
+                        && !player.is_unnamed_player_hidden_by(&other.read())
+                })
+                .filter_map(|other| {
+                    let other = other.read();
+                    let room_client = &other.room_client;
 
-                room_client
-                    .as_ref()
-                    .map(|room_client| (packet.clone(), room_client.clone()))
-            })
-            .for_each(|(packet, room_client)| {
-                tokio::spawn(async move {
-                    #[allow(clippy::unwrap_used)]
-                    room_client.send_packet(packet).await.unwrap();
+                    room_client
+                        .as_ref()
+                        .map(|room_client| (packet.clone(), room_client.clone()))
+                })
+                .for_each(|(packet, room_client)| {
+                    tokio::spawn(async move {
+                        #[allow(clippy::unwrap_used)]
+                        room_client.send_packet(packet).await.unwrap();
+                    });
                 });
-            });
+        });
 
         Ok(())
     }
@@ -284,12 +285,11 @@ impl RoomClientState {
             return Err(anyhow!("invalid sprite"));
         }
         // this is where the 2kki check would be if it actually did something other than always return true
-        let id = {
-            let mut player = self.player.write();
+        let id = self.player.with_mut(|player| {
             player.game_data.sprite.clone_from(&sprite);
             player.game_data.sprite_index = Some(sprite_index);
             player.id
-        };
+        });
         self.broadcast(OutgoingPacket::ChangeSprite {
             player_id: id,
             name: sprite,
@@ -300,48 +300,54 @@ impl RoomClientState {
     }
 
     async fn handle_flash(&mut self, flash: Flash) -> Result<()> {
-        let id = self.player.read().id;
-        self.broadcast(OutgoingPacket::PlayerFlash {
-            player_id: id,
+        self.broadcast(self.player.with(|player| OutgoingPacket::PlayerFlash {
+            player_id: player.id,
             flash,
-        })
+        }))
         .await?;
         Ok(())
     }
 
     async fn handle_repeating_flash(&mut self, flash: Flash) -> Result<()> {
-        let id = self.player.read().id;
         self.flash = Some(flash.clone());
-        self.broadcast(OutgoingPacket::RepeatingPlayerFlash {
-            player_id: id,
-            flash,
-        })
+        self.broadcast(
+            self.player
+                .with(|player| OutgoingPacket::RepeatingPlayerFlash {
+                    player_id: player.id,
+                    flash,
+                }),
+        )
         .await?;
         Ok(())
     }
 
     async fn handle_remove_repeating_flash(&mut self) -> Result<()> {
-        let id = self.player.read().id;
         self.flash = None;
-        self.broadcast(OutgoingPacket::RemoveRepeatingPlayerFlash(id))
-            .await?;
+        self.broadcast(OutgoingPacket::RemoveRepeatingPlayerFlash(
+            self.player.with(|player| player.id),
+        ))
+        .await?;
         Ok(())
     }
 
     async fn handle_transparency(&mut self, transparency: u8) -> Result<()> {
-        let id = self.player.read().id;
         // 0 - 7
         let transparency = transparency.min(7);
-        self.broadcast(OutgoingPacket::ChangeTransparency(id, transparency))
-            .await?;
+        self.broadcast(OutgoingPacket::ChangeTransparency(
+            self.player.with(|player| player.id),
+            transparency,
+        ))
+        .await?;
         Ok(())
     }
 
     async fn handle_visibility(&mut self, is_hidden: bool) -> Result<()> {
-        let id = self.player.read().id;
         self.is_hidden = is_hidden;
-        self.broadcast(OutgoingPacket::ChangeSpriteVisibility(id, is_hidden))
-            .await?;
+        self.broadcast(OutgoingPacket::ChangeSpriteVisibility(
+            self.player.with(|player| player.id),
+            is_hidden,
+        ))
+        .await?;
         Ok(())
     }
 
@@ -349,11 +355,10 @@ impl RoomClientState {
         if !self.state.assets.is_valid_system(&system, false) {
             bail!("invalid system")
         }
-        let id = {
-            let mut player = self.player.write();
+        let id = self.player.with_mut(|player| {
             player.game_data.system = Some(system.clone());
             player.id
-        };
+        });
         self.broadcast(OutgoingPacket::ChangeSystemGraphic(id, system))
             .await?;
         Ok(())
@@ -369,12 +374,11 @@ impl RoomClientState {
         if !self.state.assets.is_valid_sound(&name) {
             bail!("invalid sound");
         }
-        let id = self.player.read().id;
         let volume = volume.min(100);
         let tempo = tempo.clamp(10, 400);
         let balance = balance.min(100);
         self.broadcast(OutgoingPacket::PlaySoundEffect {
-            player_id: id,
+            player_id: self.player.with(|player| player.id),
             name,
             volume,
             tempo,
@@ -387,9 +391,11 @@ impl RoomClientState {
         if !self.state.config.battle_animation_ids.contains(&id) {
             bail!("invalid battle animation id")
         }
-        let player_id = self.player.read().id;
-        self.broadcast(OutgoingPacket::BattleAnimation(player_id, id))
-            .await?;
+        self.broadcast(OutgoingPacket::BattleAnimation(
+            self.player.with(|player| player.id),
+            id,
+        ))
+        .await?;
         Ok(())
     }
 
@@ -508,10 +514,11 @@ impl RoomClientState {
     }
 
     async fn handle_animation_command(&mut self, command: AnimationCommand) -> Result<()> {
-        // can't hold sync rwlock guard across await points
-        #[allow(unused_braces)]
-        self.broadcast({ OutgoingPacket::AnimationCommand(self.player.read().id, command) })
-            .await?;
+        self.broadcast(OutgoingPacket::AnimationCommand(
+            self.player.with(|player| player.id),
+            command,
+        ))
+        .await?;
         Ok(())
     }
     pub async fn leave_current_room(&mut self) -> Result<()> {
@@ -520,12 +527,11 @@ impl RoomClientState {
             self.player.read().id,
             self.room.read().id
         );
-        {
-            let mut room = self.room.write();
+        self.room.with_mut(|room| {
             room.players
                 .retain(|p| p.read().uuid != self.player.read().uuid);
             tracing::info!("room {:?} now has {} players", room.id, room.players.len());
-        }
+        });
         self.broadcast_disconnect_packet().await?;
         Ok(())
     }
@@ -540,10 +546,7 @@ impl RoomClientState {
         if !self.room.read().is_singleplayer {
             self.broadcast_connect_packet().await?;
             self.send_other_clients_packets().await?;
-            if let (Some(name), id) = {
-                let player = self.player.read();
-                (player.name.clone(), player.id)
-            } {
+            if let (Some(name), id) = self.player.with(|player| (player.name.clone(), player.id)) {
                 self.broadcast(OutgoingPacket::Name {
                     player_id: id,
                     name: name.0,
@@ -552,74 +555,62 @@ impl RoomClientState {
             }
         }
         self.room.write().players.push(self.player.clone());
-        {
-            let room = self.room.read();
+        self.room.with(|room| {
             tracing::info!("room {:?} now has {} players", room.id, room.players.len());
-        };
+        });
         Ok(())
     }
 
     async fn broadcast_connect_packet(&mut self) -> Result<()> {
-        let packet = {
-            let player = self.player.read();
-            OutgoingPacket::Connect {
-                player_id: player.id,
-                player_uuid: player.uuid.clone(),
-                rank: player.rank.clone(),
-                is_authenticated: player.is_authenticated,
-                badge: player.badge.clone(),
-                medals: player.medals.clone(),
-            }
-        };
+        let packet = self.player.with(|player| OutgoingPacket::Connect {
+            player_id: player.id,
+            player_uuid: player.uuid.clone(),
+            rank: player.rank.clone(),
+            is_authenticated: player.is_authenticated,
+            badge: player.badge.clone(),
+            medals: player.medals.clone(),
+        });
         self.broadcast(packet).await?;
         Ok(())
     }
 
     async fn send_other_clients_packets(&mut self) -> Result<()> {
         for (other, other_room_client) in {
-            let room = self.room.read();
-            room.players
-                .iter()
-                .filter(|other| {
-                    let other = other.read();
-                    let player = self.player.read();
-                    !player.is_blocked_with(&other)
-                        && !player.is_privated_to(&other)
-                        && !player.is_unnamed_player_hidden_by(&other)
-                })
-                .map(|other| {
-                    let other_guard = other.read();
-                    let room_client = other_guard.room_client.clone();
-                    (other.clone(), room_client)
-                })
-                // have to collect here cause otherwise the guard for room is still used
-                .collect::<Vec<_>>()
-        } {
-            tracing::trace!(
-                "sending packets for other player {:?} to new client",
-                other.read().id
-            );
-            self.send_packet({
-                let other = other.read();
-                OutgoingPacket::Connect {
-                    player_id: other.id,
-                    player_uuid: other.uuid.clone(),
-                    rank: other.rank.clone(),
-                    is_authenticated: other.is_authenticated,
-                    badge: other.badge.clone(),
-                    medals: other.medals.clone(),
-                }
+            self.room.with(|room| {
+                room.players
+                    .iter()
+                    .filter(|other| {
+                        let other = other.read();
+                        let player = self.player.read();
+                        !player.is_blocked_with(&other)
+                            && !player.is_privated_to(&other)
+                            && !player.is_unnamed_player_hidden_by(&other)
+                    })
+                    .map(|other| {
+                        let other_guard = other.read();
+                        let room_client = other_guard.room_client.clone();
+                        (other.clone(), room_client)
+                    })
+                    // have to collect here cause otherwise the guard for room is still used
+                    .collect::<Vec<_>>()
             })
+        } {
+            self.send_packet(other.with(|other| OutgoingPacket::Connect {
+                player_id: other.id,
+                player_uuid: other.uuid.clone(),
+                rank: other.rank.clone(),
+                is_authenticated: other.is_authenticated,
+                badge: other.badge.clone(),
+                medals: other.medals.clone(),
+            }))
             .await?;
             if let Some(other_room_client) = other_room_client {
                 if let Some(position) = &other_room_client.state.lock().await.position {
-                    self.send_packet({
-                        OutgoingPacket::Move {
-                            player_id: other.read().id,
-                            x: position.x,
-                            y: position.y,
-                        }
-                    })
+                    self.send_packet(other.with(|other| OutgoingPacket::Move {
+                        player_id: other.id,
+                        x: position.x,
+                        y: position.y,
+                    }))
                     .await?;
                 }
                 let facing = {
@@ -627,43 +618,35 @@ impl RoomClientState {
                     other_room_client.facing
                 };
                 if facing != Direction::default() {
-                    self.send_packet({
-                        OutgoingPacket::ChangeFacingDirection {
-                            player_id: other.read().id,
-                            direction: facing,
-                        }
-                    })
+                    self.send_packet(other.with(|other| OutgoingPacket::ChangeFacingDirection {
+                        player_id: other.id,
+                        direction: facing,
+                    }))
                     .await?;
                 }
                 let speed = other_room_client.state.lock().await.speed;
                 if let Some(speed) = speed {
-                    self.send_packet({
-                        OutgoingPacket::ChangeSpeed {
-                            player_id: other.read().id,
-                            speed,
-                        }
-                    })
+                    self.send_packet(other.with(|other| OutgoingPacket::ChangeSpeed {
+                        player_id: other.id,
+                        speed,
+                    }))
                     .await?;
                 }
                 // ok to clone the name here since we would need to clone it later anyway to send the packet
                 // cloning a None is cheap
                 if let Some(name) = { other.read().name.clone() } {
-                    self.send_packet({
-                        OutgoingPacket::Name {
-                            player_id: other.read().id,
-                            name: name.0,
-                        }
-                    })
+                    self.send_packet(other.with(|other| OutgoingPacket::Name {
+                        player_id: other.id,
+                        name: name.0,
+                    }))
                     .await?;
                 }
                 if let Some(sprite_index) = { other.read().game_data.sprite_index } {
-                    self.send_packet({
-                        OutgoingPacket::ChangeSprite {
-                            player_id: other.read().id,
-                            name: other.read().game_data.sprite.clone(),
-                            index: sprite_index,
-                        }
-                    })
+                    self.send_packet(other.with(|other| OutgoingPacket::ChangeSprite {
+                        player_id: other.id,
+                        name: other.game_data.sprite.clone(),
+                        index: sprite_index,
+                    }))
                     .await?;
                 }
                 let flash = { other_room_client.state.lock().await.flash.clone() };
@@ -685,29 +668,22 @@ impl RoomClientState {
                 }
                 let is_hidden = other_room_client.state.lock().await.is_hidden;
                 if is_hidden {
-                    // grr the compiler is the one making put these braces here in the first place
-                    // it thinks that a dropped RwLockReadGuard is being used across an await point
-                    // the compiler expects it to be out of scope entirely before the await
-                    #[allow(unused_braces)]
-                    self.send_packet({
-                        OutgoingPacket::ChangeSpriteVisibility(other.read().id, true)
-                    })
+                    self.send_packet(
+                        other.with(|other| OutgoingPacket::ChangeSpriteVisibility(other.id, true)),
+                    )
                     .await?;
                 }
                 let system = other.read().game_data.system.clone();
                 if let Some(system) = system {
-                    #[allow(unused_braces)]
-                    self.send_packet({
-                        OutgoingPacket::ChangeSystemGraphic(other.read().id, system)
-                    })
+                    self.send_packet(
+                        other.with(|other| OutgoingPacket::ChangeSystemGraphic(other.id, system)),
+                    )
                     .await?;
                 }
                 if let Some(picture) = &other_room_client.state.lock().await.saved_picture {
-                    self.send_packet({
-                        OutgoingPacket::AddPicture {
-                            picture_data: picture.0.clone(),
-                            add_picture_data: picture.1.clone(),
-                        }
+                    self.send_packet(OutgoingPacket::AddPicture {
+                        picture_data: picture.0.clone(),
+                        add_picture_data: picture.1.clone(),
                     })
                     .await?;
                 }
@@ -717,19 +693,16 @@ impl RoomClientState {
     }
 
     async fn broadcast_disconnect_packet(&mut self) -> Result<()> {
-        let packet = {
-            let player = self.player.read();
-            OutgoingPacket::Disconnection {
-                player_id: player.id,
-            }
-        };
-        self.broadcast(packet).await?;
+        self.broadcast(OutgoingPacket::Disconnection {
+            player_id: self.player.with(|player| player.id),
+        })
+        .await?;
         Ok(())
     }
 
     async fn send_room_id_packet(&mut self) -> Result<()> {
-        let id = self.room.read().id;
-        self.send_packet(OutgoingPacket::RoomId(id)).await?;
+        self.send_packet(OutgoingPacket::RoomId(self.room.with(|room| room.id)))
+            .await?;
         Ok(())
     }
 }
