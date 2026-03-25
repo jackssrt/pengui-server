@@ -236,8 +236,6 @@ impl Serializer for PacketSerializer {
 }
 #[cfg(test)]
 mod test {
-    use std::num::NonZeroUsize;
-
     use super::*;
     use crate::{player::ids::PlayerId, room::client::packet::OutgoingPacket};
     #[test]
@@ -245,17 +243,14 @@ mod test {
         let packets_and_serialized = [
             (
                 OutgoingPacket::Jump {
-                    player_id: PlayerId(unsafe { NonZeroUsize::new_unchecked(10) }),
+                    player_id: PlayerId(10),
                     x: 20,
                     y: 1,
                 },
                 bstr::B(b"jmp\xff\xff10\xff\xff20\xff\xff1"),
             ),
             (
-                OutgoingPacket::BattleAnimation(
-                    PlayerId(unsafe { NonZeroUsize::new_unchecked(999) }),
-                    99,
-                ),
+                OutgoingPacket::BattleAnimation(PlayerId(999), 99),
                 bstr::B(b"ba\xff\xff999\xff\xff99"),
             ),
         ];
