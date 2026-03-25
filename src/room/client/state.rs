@@ -544,7 +544,7 @@ impl RoomClientState {
                 let player = self.player.read();
                 (player.name.clone(), player.id)
             } {
-                self.send_packet(OutgoingPacket::Name {
+                self.broadcast(OutgoingPacket::Name {
                     player_id: id,
                     name: name.0,
                 })
