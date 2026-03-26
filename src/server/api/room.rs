@@ -78,7 +78,7 @@ async fn handle_connection(
         player.read().ip,
         room.read().id
     );
-    let (client, fut) = RoomClient::new(state, room.clone(), player.clone(), ws);
+    let (client, fut) = RoomClient::new(state, room.clone(), Arc::downgrade(&player), ws);
     let client = Arc::new(client);
     player.write().room_client = Some(client.clone());
 

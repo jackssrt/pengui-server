@@ -5,6 +5,7 @@ use std::{
 };
 
 use anyhow::{Result, bail};
+use tokio::sync::mpsc;
 
 use crate::{
     party::ids::PartyId,
@@ -22,7 +23,7 @@ use crate::{
     },
     room::client::RoomClient,
     server::{players::Players, state::AppState},
-    session::client::SessionClient,
+    session::{self, client::SessionClient},
 };
 
 pub mod badge;
@@ -68,24 +69,23 @@ pub struct Player {
 
 impl Player {
     pub async fn new(
-        state: &AppState,
-        session_client: SessionClient,
+        state: Arc<AppState>,
         is_authenticated: bool,
         uuid: PlayerUuid,
         ip: IpAddr,
+        session_outgoing_sender: mpsc::Sender<session::client::packet::OutgoingPacket>,
     ) -> Result<Arc<RwLock<Self>>> {
         // all this data is fetched here to avoid locking the players and ids_to_uuids mutexes for too long
-        let name = PlayerName::fetch_for_player_uuid(state, &uuid).await?;
-        let rank = Rank::fetch_for_player_uuid(state, &uuid).await?;
-        let badge = BadgeName::fetch_for_player_uuid(state, &uuid).await?;
-        let moderation_status = ModerationStatus::fetch_for_player_uuid(state, &uuid).await?;
-        let medals = Medals::fetch_for_player_uuid(state, &uuid).await?;
-        let party_id = PartyId::fetch_for_player_uuid(state, &uuid).await?;
-        let blocked_users = BlockedUsers::fetch_for_player_uuid(state, &uuid).await?;
+        let name = PlayerName::fetch_for_player_uuid(&state, &uuid).await?;
+        let rank = Rank::fetch_for_player_uuid(&state, &uuid).await?;
+        let badge = BadgeName::fetch_for_player_uuid(&state, &uuid).await?;
+        let moderation_status = ModerationStatus::fetch_for_player_uuid(&state, &uuid).await?;
+        let medals = Medals::fetch_for_player_uuid(&state, &uuid).await?;
+        let party_id = PartyId::fetch_for_player_uuid(&state, &uuid).await?;
+        let blocked_users = BlockedUsers::fetch_for_player_uuid(&state, &uuid).await?;
         let online_friends = HashSet::default();
         let game_data = GameData::default();
         let privacy_settings = PrivacySettings::default();
-        let session_client = Arc::new(session_client);
         {
             // get the mutable lock here to prevent a time-of-check to time-of-use race condition where
             // someone could connect a ton of clients from the same ip
@@ -101,24 +101,30 @@ impl Player {
             Ok(Players::insert_new(
                 &mut players,
                 &mut ids_to_uuids,
-                Self {
-                    id,
-                    uuid,
-                    ip,
-                    name,
-                    rank,
-                    badge,
-                    moderation_status,
-                    medals,
-                    room_client: None,
-                    session_client,
-                    party_id,
-                    blocked_users,
-                    online_friends,
-                    privacy_settings,
-                    game_data,
-                    is_authenticated,
-                },
+                Arc::new_cyclic(|weak| {
+                    RwLock::new(Self {
+                        id,
+                        uuid,
+                        ip,
+                        name,
+                        rank,
+                        badge,
+                        moderation_status,
+                        medals,
+                        room_client: None,
+                        session_client: Arc::new(SessionClient::new(
+                            state.clone(),
+                            weak.clone(),
+                            session_outgoing_sender,
+                        )),
+                        party_id,
+                        blocked_users,
+                        online_friends,
+                        privacy_settings,
+                        game_data,
+                        is_authenticated,
+                    })
+                }),
             ))
         }
     }

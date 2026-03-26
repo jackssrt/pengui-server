@@ -6,6 +6,7 @@ use axum::{
     response::Response,
 };
 use axum_client_ip::RightmostXForwardedFor;
+use tokio::sync::mpsc;
 use tracing::instrument;
 
 use crate::{
@@ -14,7 +15,6 @@ use crate::{
         api::extractors::authentication::OptionalQueryAuthentication, error::AppError,
         state::AppState,
     },
-    session::client::SessionClient,
 };
 
 #[axum::debug_handler]
@@ -26,7 +26,7 @@ pub async fn handle_session(
 ) -> Result<Response, AppError> {
     Ok(ws.on_upgrade(async move |socket| {
         if let Err(e) =
-            handle_connection(socket, state, auth.is_authenticated(), auth.take_uuid(), ip).await
+            handle_connection(state, auth.is_authenticated(), auth.take_uuid(), ip, socket).await
         {
             tracing::error!("session handler error {e:?}");
         }
@@ -34,14 +34,19 @@ pub async fn handle_session(
 }
 #[instrument(skip_all, fields(uuid = uuid.0), name = "session ws")]
 async fn handle_connection(
-    socket: WebSocket,
     state: Arc<AppState>,
     is_authenticated: bool,
     uuid: PlayerUuid,
     ip: IpAddr,
+    socket: WebSocket,
 ) -> Result<()> {
-    let (session_client, fut) = SessionClient::new(state.clone(), uuid.clone(), socket);
-    let player = Player::new(&state, session_client, is_authenticated, uuid, ip).await?;
-    fut.await;
+    let (outgoing_sender, outgoing_receiver) = mpsc::channel(100);
+    let player = Player::new(state.clone(), is_authenticated, uuid, ip, outgoing_sender).await?;
+    player
+        .with(|player| player.session_client.clone())
+        .run(socket, outgoing_receiver)
+        .await;
+
+    state.players.remove_player(player);
     Ok(())
 }

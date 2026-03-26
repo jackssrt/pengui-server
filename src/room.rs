@@ -1,4 +1,4 @@
-use std::sync::{Arc, nonpoison::RwLock};
+use std::sync::{Weak, nonpoison::RwLock};
 
 use crate::{
     player::Player,
@@ -12,7 +12,7 @@ pub mod minigame;
 pub struct Room {
     pub id: MapId,
     pub is_singleplayer: bool,
-    pub players: Vec<Arc<RwLock<Player>>>,
+    pub players: Vec<Weak<RwLock<Player>>>,
     // TODO
     // pub conditions: Vec<Condition>,
     pub minigame: Option<Minigame>,

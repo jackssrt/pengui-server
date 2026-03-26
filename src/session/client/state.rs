@@ -1,4 +1,4 @@
-use std::sync::{Arc, nonpoison::RwLock};
+use std::sync::{Arc, Weak, nonpoison::RwLock};
 
 use anyhow::{Result, anyhow};
 use serde::Serialize;
@@ -19,19 +19,19 @@ use crate::{
 #[derive(Clone)]
 pub struct SessionState {
     state: Arc<AppState>,
-    uuid: PlayerUuid,
+    player: Weak<RwLock<Player>>,
     outgoing_sender: Sender<OutgoingPacket>,
 }
 
 impl SessionState {
     pub const fn new(
         state: Arc<AppState>,
-        uuid: PlayerUuid,
+        player: Weak<RwLock<Player>>,
         outgoing_sender: Sender<OutgoingPacket>,
     ) -> Self {
         Self {
             state,
-            uuid,
+            player,
             outgoing_sender,
         }
     }
@@ -75,16 +75,13 @@ struct PlayerInfo {
 
 impl SessionState {
     async fn get_player(&self) -> Result<Arc<RwLock<Player>>> {
-        self.state
-            .players
-            .get_by_uuid(&self.uuid)
-            .await
+        self.player
+            .upgrade()
             .ok_or_else(|| anyhow!("invalid player"))
     }
     async fn handle_name(&self, name: String) -> Result<()> {
         let player = self.get_player().await?;
-        if let Some((client, packet)) = {
-            let mut player = player.write();
+        if let Some((client, packet)) = player.with_mut(|player| {
             let character_limit = if player.is_authenticated { 12 } else { 10 };
             (!name.is_empty()
                 && name.len() <= character_limit
@@ -92,44 +89,42 @@ impl SessionState {
             .then(|| {
                 player.name = Some(PlayerName(name.clone()));
                 player.room_client.as_ref().map(|client| {
-                    let client = client.clone();
                     let packet = room::client::packet::OutgoingPacket::Name {
                         player_id: player.id,
                         name,
                     };
-                    (client, packet)
+                    (client.clone(), packet)
                 })
             })
             .flatten()
-        } {
+        }) {
             client.broadcast(packet).await?;
         }
         Ok(())
     }
     async fn handle_set_private_mode(&self, mode: u8) -> Result<()> {
-        let player = self.get_player().await?;
-        let mut player = player.write();
-        player.privacy_settings.singleplayer = mode == 2;
-        player.privacy_settings.private = player.privacy_settings.singleplayer || mode == 1;
+        self.get_player().await?.with_mut(|player| {
+            player.privacy_settings.singleplayer = mode == 2;
+            player.privacy_settings.private = player.privacy_settings.singleplayer || mode == 1;
+        });
         Ok(())
     }
 
     async fn handle_info(&mut self) -> Result<()> {
-        let badge_slots = BadgeSlots::fetch_for_player_uuid(&self.state, &self.uuid).await?;
-        let screenshot_limit =
-            ScreenshotLimit::fetch_for_player_uuid(&self.state, &self.uuid).await?;
         let player = self.get_player().await?;
+        let uuid = player.read().uuid.clone();
+        let badge_slots = BadgeSlots::fetch_for_player_uuid(&self.state, &uuid).await?;
+        let screenshot_limit = ScreenshotLimit::fetch_for_player_uuid(&self.state, &uuid).await?;
         self.send_packet({
-            let player = player.read();
-            let info = PlayerInfo {
+            let info = player.with(|player| PlayerInfo {
                 name: player.name.clone(),
                 badge: player.badge.clone(),
                 badge_slots,
                 medals: player.medals.clone(),
                 rank: player.rank.clone(),
                 screenshot_limit,
-                uuid: self.uuid.clone(),
-            };
+                uuid,
+            });
             let output = serde_json::to_string(&info)?;
             OutgoingPacket::Info(output)
         })

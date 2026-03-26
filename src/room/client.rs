@@ -1,4 +1,4 @@
-use std::sync::{Arc, nonpoison::RwLock};
+use std::sync::{Arc, Weak, nonpoison::RwLock};
 
 use anyhow::{Context, Result, anyhow};
 use axum::{
@@ -32,7 +32,7 @@ impl RoomClient {
     pub fn new(
         app_state: Arc<AppState>,
         room: Arc<RwLock<Room>>,
-        player: Arc<RwLock<Player>>,
+        player: Weak<RwLock<Player>>,
         socket: WebSocket,
     ) -> (Self, impl Future<Output = ()>) {
         let (sender, recv) = mpsc::channel(1000);

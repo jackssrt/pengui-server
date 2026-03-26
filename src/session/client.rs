@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::sync::{Arc, Weak, nonpoison::RwLock};
 
 use anyhow::Result;
 use axum::extract::ws::{Message, WebSocket};
@@ -7,7 +7,7 @@ use tokio::sync::{Mutex, mpsc};
 
 use crate::{
     client::{Client, state::ClientState},
-    player::ids::PlayerUuid,
+    player::Player,
     server::state::AppState,
     session::client::{
         packet::{IncomingPacket, OutgoingPacket},
@@ -55,16 +55,22 @@ impl Client for SessionClient {
 impl SessionClient {
     pub fn new(
         app_state: Arc<AppState>,
-        uuid: PlayerUuid,
-        websocket: WebSocket,
-    ) -> (Self, impl Future<Output = ()>) {
-        let (outgoing_sender, outgoing_receiver) = mpsc::channel(16);
+        player: Weak<RwLock<Player>>,
+        outgoing_sender: mpsc::Sender<OutgoingPacket>,
+    ) -> Self {
         let state = Arc::new(Mutex::new(SessionState::new(
             app_state,
-            uuid,
+            player,
             outgoing_sender,
         )));
-        let fut = Self::run(websocket, state.clone(), outgoing_receiver);
-        (Self { state }, fut)
+
+        Self { state }
+    }
+    pub fn run(
+        &self,
+        socket: WebSocket,
+        outgoing_receiver: mpsc::Receiver<OutgoingPacket>,
+    ) -> impl std::future::Future<Output = ()> {
+        <Self as Client>::run(socket, self.state.clone(), outgoing_receiver)
     }
 }

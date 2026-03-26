@@ -1,7 +1,7 @@
 use std::{
     collections::BTreeMap,
     num::NonZeroU16,
-    sync::{Arc, nonpoison::RwLock},
+    sync::{Arc, Weak, nonpoison::RwLock},
 };
 
 use anyhow::{Context, Result, anyhow, bail};
@@ -48,7 +48,7 @@ pub struct RoomClientState {
     state: Arc<AppState>,
     outgoing_sender: Sender<OutgoingPacket>,
     pub room: Arc<RwLock<Room>>,
-    pub player: Arc<RwLock<Player>>,
+    pub player: Weak<RwLock<Player>>,
     pub facing: Direction,
     pub speed: Option<u8>,
     pub position: Option<Position>,
@@ -132,13 +132,15 @@ impl ClientState for RoomClientState {
         Ok(())
     }
     async fn broadcast(&mut self, packet: OutgoingPacket) -> Result<()> {
-        let player = self.player.read();
+        let player = self.get_player()?;
+        let player = player.read();
         if player.moderation_status.is_banned() {
             return Err(anyhow!("player is banned"));
         }
         self.room.with(|room| {
             room.players
                 .iter()
+                .filter_map(Weak::upgrade)
                 .filter(|other| player.uuid != other.read().uuid)
                 .filter(|other| {
                     !player.is_blocked_with(&other.read())
@@ -174,7 +176,7 @@ impl RoomClientState {
     pub fn new(
         state: Arc<AppState>,
         room: Arc<RwLock<Room>>,
-        player: Arc<RwLock<Player>>,
+        player: Weak<RwLock<Player>>,
         outgoing_sender: Sender<OutgoingPacket>,
     ) -> Arc<Mutex<Self>> {
         Arc::new(Mutex::new(Self {
@@ -239,7 +241,7 @@ impl RoomClientState {
         if self.sync_coords {
             // TODO check coords condition
         }
-        let id = self.player.read().id;
+        let id = self.get_player()?.with(|player| player.id);
         if movement_type.is_jump() {
             self.broadcast(OutgoingPacket::Jump {
                 player_id: id,
@@ -260,7 +262,7 @@ impl RoomClientState {
 
     async fn handle_facing(&mut self, direction: Direction) -> Result<()> {
         self.facing = direction;
-        let id = self.player.read().id;
+        let id = self.get_player()?.with(|player| player.id);
         self.broadcast(OutgoingPacket::ChangeFacingDirection {
             player_id: id,
             direction,
@@ -271,7 +273,7 @@ impl RoomClientState {
     async fn handle_speed(&mut self, speed: u8) -> Result<()> {
         let speed = speed.min(10);
         self.speed = Some(speed);
-        let id = self.player.read().id;
+        let id = self.get_player()?.with(|player| player.id);
         self.broadcast(OutgoingPacket::ChangeSpeed {
             player_id: id,
             speed,
@@ -285,7 +287,7 @@ impl RoomClientState {
             return Err(anyhow!("invalid sprite"));
         }
         // this is where the 2kki check would be if it actually did something other than always return true
-        let id = self.player.with_mut(|player| {
+        let id = self.get_player()?.with_mut(|player| {
             player.game_data.sprite.clone_from(&sprite);
             player.game_data.sprite_index = Some(sprite_index);
             player.id
@@ -300,10 +302,13 @@ impl RoomClientState {
     }
 
     async fn handle_flash(&mut self, flash: Flash) -> Result<()> {
-        self.broadcast(self.player.with(|player| OutgoingPacket::PlayerFlash {
-            player_id: player.id,
-            flash,
-        }))
+        self.broadcast(
+            self.get_player()?
+                .with(|player| OutgoingPacket::PlayerFlash {
+                    player_id: player.id,
+                    flash,
+                }),
+        )
         .await?;
         Ok(())
     }
@@ -311,7 +316,7 @@ impl RoomClientState {
     async fn handle_repeating_flash(&mut self, flash: Flash) -> Result<()> {
         self.flash = Some(flash.clone());
         self.broadcast(
-            self.player
+            self.get_player()?
                 .with(|player| OutgoingPacket::RepeatingPlayerFlash {
                     player_id: player.id,
                     flash,
@@ -324,7 +329,7 @@ impl RoomClientState {
     async fn handle_remove_repeating_flash(&mut self) -> Result<()> {
         self.flash = None;
         self.broadcast(OutgoingPacket::RemoveRepeatingPlayerFlash(
-            self.player.with(|player| player.id),
+            self.get_player()?.with(|player| player.id),
         ))
         .await?;
         Ok(())
@@ -334,7 +339,7 @@ impl RoomClientState {
         // 0 - 7
         let transparency = transparency.min(7);
         self.broadcast(OutgoingPacket::ChangeTransparency(
-            self.player.with(|player| player.id),
+            self.get_player()?.with(|player| player.id),
             transparency,
         ))
         .await?;
@@ -344,7 +349,7 @@ impl RoomClientState {
     async fn handle_visibility(&mut self, is_hidden: bool) -> Result<()> {
         self.is_hidden = is_hidden;
         self.broadcast(OutgoingPacket::ChangeSpriteVisibility(
-            self.player.with(|player| player.id),
+            self.get_player()?.with(|player| player.id),
             is_hidden,
         ))
         .await?;
@@ -355,7 +360,7 @@ impl RoomClientState {
         if !self.state.assets.is_valid_system(&system, false) {
             bail!("invalid system")
         }
-        let id = self.player.with_mut(|player| {
+        let id = self.get_player()?.with_mut(|player| {
             player.game_data.system = Some(system.clone());
             player.id
         });
@@ -378,7 +383,7 @@ impl RoomClientState {
         let tempo = tempo.clamp(10, 400);
         let balance = balance.min(100);
         self.broadcast(OutgoingPacket::PlaySoundEffect {
-            player_id: self.player.with(|player| player.id),
+            player_id: self.get_player()?.with(|player| player.id),
             name,
             volume,
             tempo,
@@ -392,7 +397,7 @@ impl RoomClientState {
             bail!("invalid battle animation id")
         }
         self.broadcast(OutgoingPacket::BattleAnimation(
-            self.player.with(|player| player.id),
+            self.get_player()?.with(|player| player.id),
             id,
         ))
         .await?;
@@ -400,12 +405,13 @@ impl RoomClientState {
     }
 
     async fn handle_sync_switch(&mut self, switch_id: u16, value: bool) -> Result<()> {
+        let player = self.get_player()?;
         let switch_id = SwitchId(switch_id);
 
         // 2kki debug switch
         let is_2kki_debug_switch =
             self.state.config.is_2kki() && switch_id == SwitchId::DEBUG_MODE_2KKI;
-        if is_2kki_debug_switch && self.player.read().rank.is_user() && value {
+        if is_2kki_debug_switch && player.read().rank.is_user() && value {
             bail!("you tried to enable debug mode for everyone, don't do that");
         }
 
@@ -515,21 +521,34 @@ impl RoomClientState {
 
     async fn handle_animation_command(&mut self, command: AnimationCommand) -> Result<()> {
         self.broadcast(OutgoingPacket::AnimationCommand(
-            self.player.with(|player| player.id),
+            self.get_player()?.with(|player| player.id),
             command,
         ))
         .await?;
         Ok(())
     }
     pub async fn leave_current_room(&mut self) -> Result<()> {
+        let player = self.get_player()?;
         tracing::trace!(
             "removing player {:?} from room {:?}",
-            self.player.read().id,
+            player.read().id,
             self.room.read().id
         );
         self.room.with_mut(|room| {
-            room.players
-                .retain(|p| p.read().uuid != self.player.read().uuid);
+            let index = room.players.iter().position(|p| {
+                p.upgrade()
+                    .is_some_and(|p| p.read().uuid == player.read().uuid)
+            });
+
+            let Some(index) = index else {
+                tracing::warn!(
+                    "tried to remove player {:?} from room {:?} but they weren't in it",
+                    player.read().id,
+                    room.id
+                );
+                return;
+            };
+            room.players.remove(index);
             tracing::info!("room {:?} now has {} players", room.id, room.players.len());
         });
         self.broadcast_disconnect_packet().await?;
@@ -537,16 +556,17 @@ impl RoomClientState {
     }
 
     pub async fn join_room(&mut self) -> Result<()> {
+        let player = self.get_player()?;
         tracing::trace!(
             "adding player {:?} to room {:?}",
-            self.player.read().id,
+            player.read().id,
             self.room.read().id
         );
         self.send_room_id_packet().await?;
         if !self.room.read().is_singleplayer {
             self.broadcast_connect_packet().await?;
             self.send_other_clients_packets().await?;
-            if let (Some(name), id) = self.player.with(|player| (player.name.clone(), player.id)) {
+            if let (Some(name), id) = player.with(|player| (player.name.clone(), player.id)) {
                 self.broadcast(OutgoingPacket::Name {
                     player_id: id,
                     name: name.0,
@@ -554,7 +574,7 @@ impl RoomClientState {
                 .await?;
             }
         }
-        self.room.write().players.push(self.player.clone());
+        self.room.write().players.push(Arc::downgrade(&player));
         self.room.with(|room| {
             tracing::info!("room {:?} now has {} players", room.id, room.players.len());
         });
@@ -562,7 +582,7 @@ impl RoomClientState {
     }
 
     async fn broadcast_connect_packet(&mut self) -> Result<()> {
-        let packet = self.player.with(|player| OutgoingPacket::Connect {
+        let packet = self.get_player()?.with(|player| OutgoingPacket::Connect {
             player_id: player.id,
             player_uuid: player.uuid.clone(),
             rank: player.rank.clone(),
@@ -575,13 +595,15 @@ impl RoomClientState {
     }
 
     async fn send_other_clients_packets(&mut self) -> Result<()> {
+        let player = self.get_player()?;
         for (other, other_room_client) in {
             self.room.with(|room| {
                 room.players
                     .iter()
+                    .filter_map(Weak::upgrade)
                     .filter(|other| {
                         let other = other.read();
-                        let player = self.player.read();
+                        let player = player.read();
                         !player.is_blocked_with(&other)
                             && !player.is_privated_to(&other)
                             && !player.is_unnamed_player_hidden_by(&other)
@@ -694,7 +716,7 @@ impl RoomClientState {
 
     async fn broadcast_disconnect_packet(&mut self) -> Result<()> {
         self.broadcast(OutgoingPacket::Disconnection {
-            player_id: self.player.with(|player| player.id),
+            player_id: self.get_player()?.with(|player| player.id),
         })
         .await?;
         Ok(())
@@ -704,5 +726,11 @@ impl RoomClientState {
         self.send_packet(OutgoingPacket::RoomId(self.room.with(|room| room.id)))
             .await?;
         Ok(())
+    }
+
+    fn get_player(&self) -> Result<Arc<RwLock<Player>>> {
+        self.player
+            .upgrade()
+            .ok_or_else(|| anyhow!("player not found"))
     }
 }
