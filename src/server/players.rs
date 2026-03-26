@@ -49,14 +49,11 @@ impl Players {
         player
     }
     pub fn remove_player(&self, player: Arc<RwLock<Player>>) {
-        // -1 because we own an Arc to the player that we're removing
         tracing::debug!(
-            "removing player {} with id {} rc {}",
+            "removing player {} with id {}",
             player.read().uuid.0,
             player.read().id.0,
-            Arc::strong_count(&player) - 1
         );
-        debug_assert!(Arc::strong_count(&player) == 1);
         let id = player.read().id.0;
         self.players.lock().remove(&player.read().uuid);
         if let Some(x) = self.ids_to_uuids.lock().get_mut(id) {
