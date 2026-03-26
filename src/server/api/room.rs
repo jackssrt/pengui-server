@@ -64,7 +64,7 @@ pub async fn handle_room(
     }),))
 }
 
-#[instrument(skip_all, fields(uuid = player.read().uuid.0), name = "room ws")]
+#[instrument(skip_all, fields(uuid = player.read().uuid.as_ref()), name = "room ws")]
 async fn handle_connection(
     state: &'static AppState,
     ws: WebSocket,

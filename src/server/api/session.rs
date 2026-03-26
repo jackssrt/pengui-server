@@ -32,7 +32,7 @@ pub async fn handle_session(
         }
     }))
 }
-#[instrument(skip_all, fields(uuid = uuid.0), name = "session ws")]
+#[instrument(skip_all, fields(uuid = uuid.as_ref()), name = "session ws")]
 async fn handle_connection(
     state: &'static AppState,
     is_authenticated: bool,

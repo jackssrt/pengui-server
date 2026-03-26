@@ -1,4 +1,4 @@
-use std::{fmt::Display, net::IpAddr};
+use std::{fmt::Display, net::IpAddr, sync::Arc};
 
 use anyhow::Result;
 use rand::distr::{Alphanumeric, SampleString};
@@ -8,13 +8,18 @@ use crate::server::state::AppState;
 
 #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Hash, Serialize, Debug)]
 #[repr(transparent)]
-pub struct PlayerUuid(pub String);
+pub struct PlayerUuid(pub Arc<str>);
+impl AsRef<str> for PlayerUuid {
+    fn as_ref(&self) -> &str {
+        &self.0
+    }
+}
 impl PlayerUuid {
     pub fn new_random() -> Self {
         // rand::rng() returns a ThreadRng
         // which is cryptographically secure
         // according to the rand crate docs
-        Self(Alphanumeric.sample_string(&mut rand::rng(), 16))
+        Self(Alphanumeric.sample_string(&mut rand::rng(), 16).into())
     }
     pub async fn fetch_for_token(state: &AppState, token: &str) -> Result<Option<Self>> {
         let query = sqlx::query!(
@@ -23,7 +28,7 @@ impl PlayerUuid {
         )
         .fetch_optional(&state.database.pool)
         .await?;
-        Ok(query.map(|x| Self(x.uuid)))
+        Ok(query.map(|x| Self(x.uuid.into())))
     }
     pub async fn fetch_for_ip(state: &AppState, ip: &IpAddr) -> Result<Self> {
         // ip is already a unique key
@@ -35,13 +40,13 @@ impl PlayerUuid {
             .fetch_optional(&state.database.pool)
             .await?;
         Ok(if let Some(query) = query {
-            Self(query.uuid)
+            Self(query.uuid.into())
         } else {
             let uuid = Self::new_random();
             sqlx::query!(
                 "INSERT INTO players (ip, uuid, banned) VALUES (?, ?, ?)",
                 ip,
-                uuid.0,
+                uuid.0.as_ref(),
                 false
             )
             .execute(&state.database.pool)

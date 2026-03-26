@@ -25,7 +25,7 @@ impl FetchForPlayerUuid for Medals {
     async fn fetch_for_player_uuid(state: &AppState, player_uuid: &PlayerUuid) -> Result<Self> {
         let query = sqlx::query!(
             "SELECT medalCountBronze, medalCountSilver, medalCountGold, medalCountPlatinum, medalCountDiamond FROM playerGameData WHERE uuid = ?",
-            player_uuid.0
+            player_uuid.as_ref()
         ).fetch_optional(&state.database.pool).await?;
 
         Ok(query.map_or_else(Self::default, |query| {

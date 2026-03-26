@@ -16,7 +16,7 @@ impl FetchForPlayerUuid for BadgeSlots {
     async fn fetch_for_player_uuid(state: &AppState, player_uuid: &PlayerUuid) -> Result<Self> {
         let record = sqlx::query!(
             "SELECT badgeSlotRows, badgeSlotCols FROM accounts WHERE uuid = ?",
-            player_uuid.0
+            player_uuid.as_ref()
         )
         .fetch_optional(&state.database.pool)
         .await?;

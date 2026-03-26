@@ -19,10 +19,10 @@ impl FetchForPlayerUuid for BlockedUsers {
         Ok(Self(
             sqlx::query!(
                 "SELECT targetUuid FROM playerBlocks where uuid = ?",
-                player_uuid.0
+                player_uuid.as_ref()
             )
             .fetch(&state.database.pool)
-            .map(|x| x.map(|x| PlayerUuid(x.targetUuid)))
+            .map(|x| x.map(|x| PlayerUuid(x.targetUuid.into())))
             .try_collect()
             .await?,
         ))
