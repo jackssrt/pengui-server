@@ -31,7 +31,7 @@ impl Players {
                 Some(_) => None,
             })
             // allocate a new id
-            .unwrap_or_else(|| PlayerId(ids_to_uuids.len() + 1))
+            .unwrap_or(PlayerId(ids_to_uuids.len()))
     }
     pub fn insert_new(
         players: &mut HashMap<PlayerUuid, Arc<RwLock<Player>>>,
@@ -56,9 +56,11 @@ impl Players {
         );
         let id = player.read().id.0;
         self.players.lock().remove(&player.read().uuid);
-        if let Some(x) = self.ids_to_uuids.lock().get_mut(id) {
-            *x = None;
-        }
+        self.ids_to_uuids.with_mut(|ids_to_uuids| {
+            if let Some(x) = ids_to_uuids.get_mut(id) {
+                *x = None;
+            }
+        });
         drop(player);
     }
     pub async fn get_by_uuid(&self, uuid: &PlayerUuid) -> Option<Arc<RwLock<Player>>> {
