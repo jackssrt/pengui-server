@@ -45,7 +45,7 @@ pub struct Position {
 }
 
 pub struct RoomClientState {
-    state: Arc<AppState>,
+    state: &'static AppState,
     outgoing_sender: Sender<OutgoingPacket>,
     pub room: Arc<RwLock<Room>>,
     pub player: Weak<RwLock<Player>>,
@@ -174,7 +174,7 @@ impl RoomClientState {
     const MAX_PICTURE_ID: u16 = 1000;
 
     pub fn new(
-        state: Arc<AppState>,
+        state: &'static AppState,
         room: Arc<RwLock<Room>>,
         player: Weak<RwLock<Player>>,
         outgoing_sender: Sender<OutgoingPacket>,

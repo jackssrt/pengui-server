@@ -69,20 +69,20 @@ pub struct Player {
 
 impl Player {
     pub async fn new(
-        state: Arc<AppState>,
+        state: &'static AppState,
         is_authenticated: bool,
         uuid: PlayerUuid,
         ip: IpAddr,
         session_outgoing_sender: mpsc::Sender<session::client::packet::OutgoingPacket>,
     ) -> Result<Arc<RwLock<Self>>> {
         // all this data is fetched here to avoid locking the players and ids_to_uuids mutexes for too long
-        let name = PlayerName::fetch_for_player_uuid(&state, &uuid).await?;
-        let rank = Rank::fetch_for_player_uuid(&state, &uuid).await?;
-        let badge = BadgeName::fetch_for_player_uuid(&state, &uuid).await?;
-        let moderation_status = ModerationStatus::fetch_for_player_uuid(&state, &uuid).await?;
-        let medals = Medals::fetch_for_player_uuid(&state, &uuid).await?;
-        let party_id = PartyId::fetch_for_player_uuid(&state, &uuid).await?;
-        let blocked_users = BlockedUsers::fetch_for_player_uuid(&state, &uuid).await?;
+        let name = PlayerName::fetch_for_player_uuid(state, &uuid).await?;
+        let rank = Rank::fetch_for_player_uuid(state, &uuid).await?;
+        let badge = BadgeName::fetch_for_player_uuid(state, &uuid).await?;
+        let moderation_status = ModerationStatus::fetch_for_player_uuid(state, &uuid).await?;
+        let medals = Medals::fetch_for_player_uuid(state, &uuid).await?;
+        let party_id = PartyId::fetch_for_player_uuid(state, &uuid).await?;
+        let blocked_users = BlockedUsers::fetch_for_player_uuid(state, &uuid).await?;
         let online_friends = HashSet::default();
         let game_data = GameData::default();
         let privacy_settings = PrivacySettings::default();
@@ -113,7 +113,7 @@ impl Player {
                         medals,
                         room_client: None,
                         session_client: Arc::new(SessionClient::new(
-                            state.clone(),
+                            state,
                             weak.clone(),
                             session_outgoing_sender,
                         )),

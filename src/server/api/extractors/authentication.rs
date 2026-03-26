@@ -1,5 +1,3 @@
-use std::sync::Arc;
-
 use anyhow::Error;
 use axum::{
     RequestPartsExt,
@@ -60,11 +58,11 @@ fn token_not_specified_rejection() -> AuthenticationRejection {
 }
 
 pub struct HeaderAuthentication(pub Authentication);
-impl FromRequestParts<Arc<AppState>> for HeaderAuthentication {
+impl FromRequestParts<&'static AppState> for HeaderAuthentication {
     type Rejection = AuthenticationRejection;
     async fn from_request_parts(
         parts: &mut Parts,
-        state: &Arc<AppState>,
+        state: &&'static AppState,
     ) -> Result<Self, Self::Rejection> {
         let Some(header) = parts
             .extract::<Option<TypedHeader<Authorization<Bearer>>>>()
@@ -85,11 +83,11 @@ impl FromRequestParts<Arc<AppState>> for HeaderAuthentication {
     }
 }
 pub struct OptionalHeaderAuthentication(pub OptionalAuthentication);
-impl FromRequestParts<Arc<AppState>> for OptionalHeaderAuthentication {
+impl FromRequestParts<&'static AppState> for OptionalHeaderAuthentication {
     type Rejection = AuthenticationRejection;
     async fn from_request_parts(
         parts: &mut Parts,
-        state: &Arc<AppState>,
+        state: &&'static AppState,
     ) -> Result<Self, Self::Rejection> {
         let RightmostXForwardedFor(ip) = parts
             .extract::<RightmostXForwardedFor>()
@@ -127,11 +125,11 @@ struct TokenQuery {
 }
 
 pub struct QueryAuthentication(pub Authentication);
-impl FromRequestParts<Arc<AppState>> for QueryAuthentication {
+impl FromRequestParts<&'static AppState> for QueryAuthentication {
     type Rejection = AuthenticationRejection;
     async fn from_request_parts(
         parts: &mut Parts,
-        state: &Arc<AppState>,
+        state: &&'static AppState,
     ) -> Result<Self, Self::Rejection> {
         let query = parts
             .extract::<Query<TokenQuery>>()
@@ -148,11 +146,11 @@ impl FromRequestParts<Arc<AppState>> for QueryAuthentication {
 }
 
 pub struct OptionalQueryAuthentication(pub OptionalAuthentication);
-impl FromRequestParts<Arc<AppState>> for OptionalQueryAuthentication {
+impl FromRequestParts<&'static AppState> for OptionalQueryAuthentication {
     type Rejection = AuthenticationRejection;
     async fn from_request_parts(
         parts: &mut Parts,
-        state: &Arc<AppState>,
+        state: &&'static AppState,
     ) -> Result<Self, Self::Rejection> {
         let RightmostXForwardedFor(ip) = parts
             .extract::<RightmostXForwardedFor>()

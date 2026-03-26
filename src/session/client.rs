@@ -54,7 +54,7 @@ impl Client for SessionClient {
 }
 impl SessionClient {
     pub fn new(
-        app_state: Arc<AppState>,
+        app_state: &'static AppState,
         player: Weak<RwLock<Player>>,
         outgoing_sender: mpsc::Sender<OutgoingPacket>,
     ) -> Self {

@@ -30,7 +30,7 @@ pub struct RoomClient {
 }
 impl RoomClient {
     pub fn new(
-        app_state: Arc<AppState>,
+        app_state: &'static AppState,
         room: Arc<RwLock<Room>>,
         player: Weak<RwLock<Player>>,
         socket: WebSocket,

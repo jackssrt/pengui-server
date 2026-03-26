@@ -1,5 +1,3 @@
-use std::sync::Arc;
-
 use axum::{
     extract::{Request, State},
     http::StatusCode,
@@ -17,12 +15,12 @@ use crate::{
 
 #[axum::debug_middleware]
 pub async fn moderation_middleware(
-    State(state): State<Arc<AppState>>,
+    State(state): State<&'static AppState>,
     HeaderAuthentication(Authentication { uuid, .. }): HeaderAuthentication,
     mut request: Request,
     next: Next,
 ) -> Result<Response, impl IntoResponse> {
-    let moderation_status = ModerationStatus::fetch_for_player_uuid(&state, &uuid)
+    let moderation_status = ModerationStatus::fetch_for_player_uuid(state, &uuid)
         .await
         .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, ""))?;
     if moderation_status.is_banned() {

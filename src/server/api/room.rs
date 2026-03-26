@@ -33,7 +33,7 @@ pub struct RoomQuery {
 #[instrument(skip_all)]
 pub async fn handle_room(
     ws: WebSocketUpgrade,
-    State(state): State<Arc<AppState>>,
+    State(state): State<&'static AppState>,
     OptionalQueryAuthentication(auth): OptionalQueryAuthentication,
     Query(RoomQuery { id }): Query<RoomQuery>,
     r: Request,
@@ -66,7 +66,7 @@ pub async fn handle_room(
 
 #[instrument(skip_all, fields(uuid = player.read().uuid.0), name = "room ws")]
 async fn handle_connection(
-    state: Arc<AppState>,
+    state: &'static AppState,
     ws: WebSocket,
     room: Arc<RwLock<Room>>,
     player: Arc<RwLock<Player>>,

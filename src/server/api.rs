@@ -1,4 +1,4 @@
-use std::{fmt::Debug, sync::Arc, time::Duration};
+use std::{fmt::Debug, time::Duration};
 
 use anyhow::Result;
 use axum::{
@@ -44,7 +44,7 @@ mod session;
 static ALLOWED_ORIGINS: &[&str] = &["http://localhost:*", "https://ynoproject.net"];
 
 #[allow(clippy::unwrap_used)]
-pub async fn setup_router<L>(state: Arc<AppState>, listener: L) -> Result<()>
+pub async fn setup_router<L>(state: &'static AppState, listener: L) -> Result<()>
 where
     L: Listener,
     L::Addr: Debug,
@@ -60,10 +60,7 @@ where
                     DefaultBodyLimit::max(8 * 1024 * 1024), // 8 mb
                 ),
         )
-        .route_layer(from_fn_with_state(
-            Arc::clone(&state),
-            moderation_middleware,
-        ));
+        .route_layer(from_fn_with_state(state, moderation_middleware));
     let websockets = Router::new()
         .route("/session", any(handle_session))
         .route("/room", any(handle_room))

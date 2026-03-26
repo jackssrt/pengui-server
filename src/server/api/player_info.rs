@@ -1,5 +1,3 @@
-use std::sync::Arc;
-
 use axum::{Json, extract::State};
 use axum_client_ip::RightmostXForwardedFor;
 use serde::Serialize;
@@ -40,27 +38,27 @@ async fn helper(state: &AppState, token: Option<&str>) {}
 
 #[axum::debug_handler]
 pub async fn handle_player_info(
-    State(state): State<Arc<AppState>>,
+    State(state): State<&'static AppState>,
     OptionalHeaderAuthentication(auth): OptionalHeaderAuthentication,
     RightmostXForwardedFor(ip): RightmostXForwardedFor,
 ) -> Result<Json<PlayerInfo>, AppError> {
     let is_authenticated = auth.is_authenticated();
     let uuid = auth.take_uuid();
     Ok(PlayerInfo {
-        name: PlayerName::fetch_for_player_uuid(&state, &uuid)
+        name: PlayerName::fetch_for_player_uuid(state, &uuid)
             .await?
             .unwrap_or_default(),
-        rank: Rank::fetch_for_player_uuid(&state, &uuid).await?,
-        badge: BadgeName::fetch_for_player_uuid(&state, &uuid)
+        rank: Rank::fetch_for_player_uuid(state, &uuid).await?,
+        badge: BadgeName::fetch_for_player_uuid(state, &uuid)
             .await?
             .unwrap_or_default(),
         location_ids: {
-            let locations = Locations::fetch_for_player_uuid(&state, &uuid).await?;
+            let locations = Locations::fetch_for_player_uuid(state, &uuid).await?;
             (!locations.0.is_empty()).then_some(locations)
         },
-        medals: Medals::fetch_for_player_uuid(&state, &uuid).await?,
-        badge_slots: BadgeSlots::fetch_for_player_uuid(&state, &uuid).await?,
-        screenshot_limit: ScreenshotLimit::fetch_for_player_uuid(&state, &uuid).await?,
+        medals: Medals::fetch_for_player_uuid(state, &uuid).await?,
+        badge_slots: BadgeSlots::fetch_for_player_uuid(state, &uuid).await?,
+        screenshot_limit: ScreenshotLimit::fetch_for_player_uuid(state, &uuid).await?,
         registered: is_authenticated,
         uuid,
     }

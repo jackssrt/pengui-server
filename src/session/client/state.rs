@@ -18,14 +18,14 @@ use crate::{
 
 #[derive(Clone)]
 pub struct SessionState {
-    state: Arc<AppState>,
+    state: &'static AppState,
     player: Weak<RwLock<Player>>,
     outgoing_sender: Sender<OutgoingPacket>,
 }
 
 impl SessionState {
     pub const fn new(
-        state: Arc<AppState>,
+        state: &'static AppState,
         player: Weak<RwLock<Player>>,
         outgoing_sender: Sender<OutgoingPacket>,
     ) -> Self {
@@ -113,8 +113,8 @@ impl SessionState {
     async fn handle_info(&mut self) -> Result<()> {
         let player = self.get_player().await?;
         let uuid = player.read().uuid.clone();
-        let badge_slots = BadgeSlots::fetch_for_player_uuid(&self.state, &uuid).await?;
-        let screenshot_limit = ScreenshotLimit::fetch_for_player_uuid(&self.state, &uuid).await?;
+        let badge_slots = BadgeSlots::fetch_for_player_uuid(self.state, &uuid).await?;
+        let screenshot_limit = ScreenshotLimit::fetch_for_player_uuid(self.state, &uuid).await?;
         self.send_packet({
             let info = player.with(|player| PlayerInfo {
                 name: player.name.clone(),

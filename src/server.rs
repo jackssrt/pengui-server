@@ -1,4 +1,4 @@
-use std::{fs::create_dir, os::unix::fs::PermissionsExt, path::PathBuf, sync::Arc};
+use std::{fs::create_dir, os::unix::fs::PermissionsExt, path::PathBuf};
 
 use anyhow::Result;
 use tokio::net::UnixListener;
@@ -42,7 +42,7 @@ pub fn get_listener(config: &Config) -> Result<UnixListener> {
 
     Ok(listener)
 }
-async fn setup_router(state: Arc<AppState>) -> Result<()> {
+async fn setup_router(state: &'static AppState) -> Result<()> {
     // listen
     let listener = get_listener(&state.config)?;
     api::setup_router(state, listener).await?;
@@ -52,10 +52,10 @@ async fn setup_router(state: Arc<AppState>) -> Result<()> {
 
 pub async fn start() -> Result<()> {
     tracing::info!("starting");
-    let state = Arc::new(AppState::setup().await?);
+    let state = Box::leak(Box::new(AppState::setup().await?));
 
-    init_history(&state);
-    init_session(state.clone());
+    init_history(state);
+    init_session(state);
 
     setup_router(state).await?;
 

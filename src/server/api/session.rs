@@ -1,4 +1,4 @@
-use std::{net::IpAddr, sync::Arc};
+use std::net::IpAddr;
 
 use anyhow::Result;
 use axum::{
@@ -19,7 +19,7 @@ use crate::{
 
 #[axum::debug_handler]
 pub async fn handle_session(
-    State(state): State<Arc<AppState>>,
+    State(state): State<&'static AppState>,
     ws: WebSocketUpgrade,
     OptionalQueryAuthentication(auth): OptionalQueryAuthentication,
     RightmostXForwardedFor(ip): RightmostXForwardedFor,
@@ -34,14 +34,14 @@ pub async fn handle_session(
 }
 #[instrument(skip_all, fields(uuid = uuid.0), name = "session ws")]
 async fn handle_connection(
-    state: Arc<AppState>,
+    state: &'static AppState,
     is_authenticated: bool,
     uuid: PlayerUuid,
     ip: IpAddr,
     socket: WebSocket,
 ) -> Result<()> {
     let (outgoing_sender, outgoing_receiver) = mpsc::channel(100);
-    let player = Player::new(state.clone(), is_authenticated, uuid, ip, outgoing_sender).await?;
+    let player = Player::new(state, is_authenticated, uuid, ip, outgoing_sender).await?;
     player
         .with(|player| player.session_client.clone())
         .run(socket, outgoing_receiver)
