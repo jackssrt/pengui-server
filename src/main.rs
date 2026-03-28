@@ -12,7 +12,6 @@
 #![feature(nonpoison_mutex)]
 #![feature(duration_constructors)]
 #![feature(stmt_expr_attributes)]
-#![feature(extend_one)]
 #![feature(lock_value_accessors)]
 #![deny(clippy::panic)]
 use anyhow::Result;

@@ -96,11 +96,11 @@ impl Player {
                 bail!("too many connections from ip");
             }
 
-            let mut ids_to_uuids = state.players.ids_to_uuids.lock();
-            let id = Players::get_next_free_id(&ids_to_uuids);
+            let mut free_ids = state.players.free_ids.lock();
+            let id = Players::get_next_free_id(&players, &mut free_ids);
             Ok(Players::insert_new(
                 &mut players,
-                &mut ids_to_uuids,
+                &free_ids,
                 Arc::new_cyclic(|weak| {
                     RwLock::new(Self {
                         id,
