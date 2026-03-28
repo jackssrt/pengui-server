@@ -1,5 +1,7 @@
 # pengui-server
 
+![GitHub License](https://img.shields.io/github/license/jackssrt/pengui-server)
+
 a rust rewrite of [yno-server](https://github.com/ynoproject/ynoserver), aiming to be a drop-in replacement while also being faster and more stable.
 
 ## production
@@ -30,6 +32,7 @@ where `{game_name}` is the game_name field of the config
 - symlink a copy of yume 2kki to `/2kki`
   - so the map (`*.lmu`) files are directly in `/2kki/*.lmu`
 - generate or grab the key.bin from the ynoengine wasm binary which your testing client(s) use and put it in `/key.bin`
+- use [nightly rust](https://doc.rust-lang.org/book/appendix-07-nightly-rust.html#rustup-and-the-role-of-rust-nightly)
 
 ### running
 
@@ -53,19 +56,18 @@ this project is bound by the AGPL-3.0 license because it contains a lot of porte
 - [ ] room websocket
   - [X] client handler
     - [X] message signing
-  - [X] switch room (partial)
+  - [X] switch room
   - [X] movement
   - [X] facing direction
   - [X] flashing
-  - [ ] tone
   - [X] transparency & visibility
   - [X] system graphic
   - [X] sound effects
   - [X] battle animations
   - [X] changing sprites
-  - [X] pictures (`experimental`)
-  - [X] syncing switches (`partial`)
-  - [X] syncing variables (`partial`)
+  - [X] pictures ![experimental](https://img.shields.io/badge/status-experimental-purple)
+  - [X] syncing switches ![partial](https://img.shields.io/badge/status-partial-orange)
+  - [X] syncing variables ![partial](https://img.shields.io/badge/status-partial-orange)
   - [ ] syncing events
   - these sync events require a lot of supporting infrastructure, which i haven't made yet
   - [X] animation commands
@@ -75,10 +77,17 @@ this project is bound by the AGPL-3.0 license because it contains a lot of porte
   - [X] setting name
   - [X] chat messages
   - [ ] expeditions
+    - [ ] list
+    - [ ] claiming
   - [X] setting private mode
   - [X] player info
+  - [ ] entering locations
+  - [ ] friends list
+  - [ ] parties
+  - [ ] events
+  - [ ] screenshots
   - ...
-- [ ] api (partial)
+- [ ] api
   - [ ] friends
   - [ ] parties
   - [ ] badges
@@ -96,7 +105,7 @@ this project is bound by the AGPL-3.0 license because it contains a lot of porte
   - [X] router
   - [X] authentication middleware
   - [X] moderation middleware
-  - [X] minigames (`needs a refactor`)
+  - [X] minigames ![needs a refactor](https://img.shields.io/badge/status-needs_a_refactor-orange)
   - [ ] ipc
   - [X] config
   - [X] command line
