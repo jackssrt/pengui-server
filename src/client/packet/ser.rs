@@ -187,6 +187,10 @@ impl Serializer for PacketSerializer {
     }
 
     fn serialize_map(self, len: Option<usize>) -> Result<Self::SerializeMap, Self::Error> {
+        tracing::error!(
+            "tried to serialize a map, which is not supported by the packet serializer, are you using #[serde(flatten)] somewhere?"
+        );
+        tracing::error!("{:?}", self.parts);
         unimplemented!()
     }
 

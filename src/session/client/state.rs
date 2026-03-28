@@ -1,11 +1,14 @@
 use std::sync::{Arc, Weak, nonpoison::RwLock};
 
-use anyhow::{Result, anyhow};
+use anyhow::{Result, anyhow, bail};
+use rand::distr::{Alphabetic, SampleString};
 use serde::Serialize;
+use strum::EnumIs;
 use tokio::sync::mpsc::Sender;
 
 use crate::{
     client::{Client, state::ClientState},
+    locations::Locations,
     player::{
         Player, badge::BadgeName, badge_slots::BadgeSlots, ids::PlayerUuid, medal::Medals,
         name::PlayerName, rank::Rank, screenshot_limit::ScreenshotLimit,
@@ -15,6 +18,12 @@ use crate::{
     server::state::AppState,
     session::client::packet::{IncomingPacket, OutgoingPacket},
 };
+#[derive(Debug, PartialEq, Eq, Clone, EnumIs)]
+enum ChatChannel {
+    Map,
+    Global,
+    Party,
+}
 
 #[derive(Clone)]
 pub struct SessionState {
@@ -46,6 +55,11 @@ impl ClientState for SessionState {
             IncomingPacket::SetPrivateMode(mode) => self.handle_set_private_mode(mode).await,
             IncomingPacket::ClaimExpeditionLocation { name, is_free } => todo!(),
             IncomingPacket::Info() => self.handle_info().await,
+            IncomingPacket::SayMap(content) => self.handle_say(ChatChannel::Map, content).await,
+            IncomingPacket::SayGlobal(content) => {
+                self.handle_say(ChatChannel::Global, content).await
+            }
+            IncomingPacket::SayParty(content) => self.handle_say(ChatChannel::Party, content).await,
             x => {
                 tracing::debug!("unimplemented session packet: {:?}", x);
                 Ok(())
@@ -128,6 +142,180 @@ impl SessionState {
             let output = serde_json::to_string(&info)?;
             OutgoingPacket::Info(output)
         })
+        .await?;
+        Ok(())
+    }
+
+    async fn handle_say(&mut self, channel: ChatChannel, content: String) -> Result<()> {
+        // moved up here because this is most likely to trigger, and cheapest to check
+        // the original server also only checks byte length
+        // meaning you can only fit 4 men kissing emojis with skin tone modifiers in one message </3
+        if content.is_empty() || content.len() > 150 {
+            bail!("invalid message");
+        }
+        let player = self.get_player().await?;
+        let (name, system) = player.with(|player| {
+            if channel.is_map() && player.room_client.is_none() {
+                bail!("room client does not exist, are you connected to the room ws?")
+            }
+
+            if player.moderation_status.is_muted() {
+                bail!("player is muted");
+            }
+
+            let (Some(name), Some(system)) = (player.name.clone(), player.game_data.system.clone())
+            else {
+                bail!("no name or system graphic set");
+            };
+            Ok((name, system))
+        })?;
+        match channel {
+            ChatChannel::Map => {
+                self.do_map_say(content, &player).await?;
+            }
+            ChatChannel::Global => {
+                self.do_global_say(content, &player, name, system).await?;
+            }
+            ChatChannel::Party => {
+                if player.read().party_id.is_none() {
+                    bail!("player is not in a party");
+                }
+                let room_client = player
+                    .with(|player| {
+                        (!player.privacy_settings.should_hide_location).then(|| {
+                            player
+                                .room_client
+                                .as_ref()
+                                .map(|client| client.state.clone())
+                        })
+                    })
+                    .flatten();
+            }
+        }
+
+        Ok(())
+    }
+
+    async fn do_global_say(
+        &mut self,
+        content: String,
+        player: &RwLock<Player>,
+        name: PlayerName,
+        system: String,
+    ) -> Result<()> {
+        let room_client = player
+            .with(|player| {
+                (!player.privacy_settings.should_hide_location).then(|| {
+                    player
+                        .room_client
+                        .as_ref()
+                        .map(|client| client.state.clone())
+                })
+            })
+            .flatten();
+        let (map_id, previous_map_id, previous_locations, x, y) =
+            if let Some(room_client) = room_client {
+                let room_client = room_client.lock().await;
+                let room = room_client.room.read();
+                (
+                    room.id.0.get(),
+                    room_client.previous_map_id.map_or(0, |id| id.0.get()),
+                    room_client.previous_locations.clone(),
+                    room_client.position.map(|p| p.x.cast_signed()),
+                    room_client.position.map(|p| p.y.cast_signed()),
+                )
+            } else {
+                (0, 0, Locations::default(), None, None)
+            };
+        let is_banned = player.with(|player| player.moderation_status.is_banned());
+        if is_banned {
+            self.send_packet(player.with(|player| OutgoingPacket::SayGlobal {
+                uuid: player.uuid.clone(),
+                content: content.clone(),
+                map_id,
+                previous_map_id,
+                previous_locations,
+                x: x.unwrap_or(-1),
+                y: y.unwrap_or(-1),
+                message_id: Alphabetic.sample_string(&mut rand::rng(), 12),
+            }))
+            .await?;
+        } else {
+            self.state
+                .players
+                .broadcast_session_packet(player.with(|player| OutgoingPacket::PlayerInfo {
+                    uuid: player.uuid.clone(),
+                    name,
+                    system,
+                    rank: player.rank.clone(),
+                    badge: player.badge.clone(),
+                    medals: player.medals.clone(),
+                    is_authenticated: player.is_authenticated,
+                }))
+                .await;
+            self.state
+                .players
+                .broadcast_session_packet(player.with(|player| OutgoingPacket::SayGlobal {
+                    uuid: player.uuid.clone(),
+                    content: content.clone(),
+                    map_id,
+                    previous_map_id,
+                    previous_locations,
+                    x: x.unwrap_or(-1),
+                    y: y.unwrap_or(-1),
+                    message_id: Alphabetic.sample_string(&mut rand::rng(), 12),
+                }))
+                .await;
+        }
+        // TODO history
+        // TODO webhook
+        Ok(())
+    }
+
+    async fn do_map_say(&mut self, content: String, player: &RwLock<Player>) -> Result<()> {
+        if !player.read().moderation_status.is_banned() {
+            // checked before that room client exists, so we can unwrap here
+            #[allow(clippy::unwrap_used)]
+            player
+                .with(|player| player.room_client.as_ref().unwrap().state.clone())
+                .lock()
+                .await
+                .room
+                .clone()
+                .with(|room| {
+                    room.players
+                        .iter()
+                        .filter_map(Weak::upgrade)
+                        .filter(|other| other.read().uuid != player.read().uuid)
+                        .filter(|other| {
+                            let player = player.read();
+                            let other = other.read();
+
+                            !player.is_blocked_with(&other) && !other.is_privated_to(&player)
+                        })
+                        .map(|other| {
+                            let packet = OutgoingPacket::SayMap {
+                                uuid: player.read().uuid.clone(),
+                                content: content.clone(),
+                            };
+                            (other, packet)
+                        })
+                        .for_each(|(other, packet)| {
+                            tokio::spawn(async move {
+                                other
+                                    .with(|other| other.session_client.state.clone())
+                                    .lock()
+                                    .await
+                                    .send_packet(packet)
+                                    .await
+                            });
+                        });
+                });
+        }
+        self.send_packet(player.with(|player| OutgoingPacket::SayMap {
+            uuid: player.uuid.clone(),
+            content,
+        }))
         .await?;
         Ok(())
     }

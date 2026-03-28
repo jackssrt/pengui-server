@@ -1,7 +1,12 @@
 use bstr::{BStr, BString};
 use serde::{Deserialize, Serialize};
 
-use crate::client::packet::{de::PacketDeserializer, error::PacketError, ser::PacketSerializer};
+use crate::{
+    client::packet::{de::PacketDeserializer, error::PacketError, ser::PacketSerializer},
+    locations::Locations,
+    player::{badge::BadgeName, ids::PlayerUuid, medal::Medals, name::PlayerName, rank::Rank},
+    room::ids::MapId,
+};
 
 #[derive(Deserialize, Debug, PartialEq, Eq, Clone)]
 #[serde(deny_unknown_fields)]
@@ -30,13 +35,43 @@ impl IncomingPacket {
     }
 }
 
-#[derive(Serialize, Debug, PartialEq, Eq, Clone)]
+#[derive(Serialize, Debug, Clone)]
 #[serde(deny_unknown_fields)]
 pub enum OutgoingPacket {
     #[serde(rename = "pc")]
     PlayerCount(usize),
     #[serde(rename = "i")]
     Info(String),
+    #[serde(rename = "say")]
+    SayMap { uuid: PlayerUuid, content: String },
+    #[serde(rename = "p")]
+    PlayerInfo {
+        uuid: PlayerUuid,
+        name: PlayerName,
+        system: String,
+        rank: Rank,
+        is_authenticated: bool,
+        badge: Option<BadgeName>,
+        medals: Medals,
+    },
+    #[serde(rename = "gsay")]
+    SayGlobal {
+        uuid: PlayerUuid,
+        // can be 0
+        map_id: u16,
+        previous_map_id: u16,
+        previous_locations: Locations,
+        x: i16,
+        y: i16,
+        content: String,
+        message_id: String,
+    },
+    #[serde(rename = "psay")]
+    SayParty {
+        player_uuid: PlayerUuid,
+        content: String,
+        message_id: String,
+    },
 }
 impl OutgoingPacket {
     pub fn into_bstring(self) -> Result<BString, PacketError> {

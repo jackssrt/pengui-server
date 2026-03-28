@@ -11,6 +11,7 @@ use tokio::sync::{Mutex, mpsc::Sender};
 use super::packet::{AddPictureData, AnimationCommand, PictureData};
 use crate::{
     client::{Client, state::ClientState},
+    locations::Locations,
     player::Player,
     room::{
         Room,
@@ -20,7 +21,7 @@ use crate::{
             flash::Flash,
             packet::{IncomingPacket, OutgoingPacket},
         },
-        ids::{SwitchId, VariableId},
+        ids::{MapId, SwitchId, VariableId},
     },
     server::{rooms::Rooms, state::AppState},
 };
@@ -39,6 +40,7 @@ enum ExtraPictureData {
 }
 
 pub struct SavedPicture(pub PictureData, pub AddPictureData);
+#[derive(Debug, PartialEq, Eq, Clone, Copy, PartialOrd, Ord)]
 pub struct Position {
     pub x: u16,
     pub y: u16,
@@ -60,6 +62,8 @@ pub struct RoomClientState {
     variable_cache: BTreeMap<VariableId, u16>,
     pub saved_picture: Option<SavedPicture>,
     pub cryptography: Cryptography,
+    pub previous_map_id: Option<MapId>,
+    pub previous_locations: Locations,
 }
 
 impl ClientState for RoomClientState {
@@ -195,6 +199,8 @@ impl RoomClientState {
             variable_cache: BTreeMap::new(),
             saved_picture: None,
             cryptography: Cryptography::new(),
+            previous_map_id: None,
+            previous_locations: Locations::default(),
         }))
     }
 

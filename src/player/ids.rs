@@ -6,7 +6,7 @@ use serde::Serialize;
 
 use crate::server::state::AppState;
 
-#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Hash, Serialize, Debug)]
+#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Hash, Debug)]
 #[repr(transparent)]
 pub struct PlayerUuid(pub Arc<str>);
 impl AsRef<str> for PlayerUuid {
@@ -63,6 +63,14 @@ impl Default for PlayerUuid {
 impl Display for PlayerUuid {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.0)
+    }
+}
+impl Serialize for PlayerUuid {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        AsRef::<str>::as_ref(&self.0).serialize(serializer)
     }
 }
 #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Hash, Serialize, Copy, Debug, Default)]

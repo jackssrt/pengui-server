@@ -10,11 +10,13 @@ use tokio::sync::mpsc;
 use tracing::instrument;
 
 use crate::{
+    client::Client,
     player::{Player, ids::PlayerUuid},
     server::{
         api::extractors::authentication::OptionalQueryAuthentication, error::AppError,
         state::AppState,
     },
+    session::client::packet::OutgoingPacket,
 };
 
 #[axum::debug_handler]
@@ -42,10 +44,8 @@ async fn handle_connection(
 ) -> Result<()> {
     let (outgoing_sender, outgoing_receiver) = mpsc::channel(100);
     let player = Player::new(state, is_authenticated, uuid, ip, outgoing_sender).await?;
-    player
-        .with(|player| player.session_client.clone())
-        .run(socket, outgoing_receiver)
-        .await;
+    let session_client = player.with(|player| player.session_client.clone());
+    session_client.run(socket, outgoing_receiver).await;
 
     state.players.remove_player(player);
     Ok(())
