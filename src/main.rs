@@ -13,7 +13,6 @@
 #![feature(duration_constructors)]
 #![feature(stmt_expr_attributes)]
 #![feature(lock_value_accessors)]
-#![feature(bool_to_result)]
 #![deny(clippy::panic)]
 use anyhow::Result;
 
@@ -27,6 +26,7 @@ mod player;
 mod room;
 mod server;
 mod session;
+mod traits;
 
 #[tokio::main]
 async fn main() -> Result<()> {

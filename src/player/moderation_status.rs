@@ -1,9 +1,6 @@
 use anyhow::Result;
 
-use crate::{
-    player::{ids::PlayerUuid, traits::FetchForPlayerUuid},
-    server::state::AppState,
-};
+use crate::{player::ids::PlayerUuid, server::state::AppState, traits::FetchForPlayerUuid};
 
 #[derive(Default, strum::EnumIs)]
 pub enum ModerationStatus {

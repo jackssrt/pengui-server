@@ -11,7 +11,6 @@ use tokio::sync::{Mutex, mpsc::Sender};
 use super::packet::{AddPictureData, AnimationCommand, PictureData};
 use crate::{
     client::{Client, state::ClientState},
-    locations::Locations,
     player::Player,
     room::{
         Room,
@@ -63,7 +62,7 @@ pub struct RoomClientState {
     pub saved_picture: Option<SavedPicture>,
     pub cryptography: Cryptography,
     pub previous_map_id: Option<MapId>,
-    pub previous_locations: Locations,
+    pub previous_locations: Arc<str>,
 }
 
 impl ClientState for RoomClientState {
@@ -200,7 +199,7 @@ impl RoomClientState {
             saved_picture: None,
             cryptography: Cryptography::new(),
             previous_map_id: None,
-            previous_locations: Locations::default(),
+            previous_locations: Arc::default(),
         }))
     }
 
@@ -362,8 +361,8 @@ impl RoomClientState {
         Ok(())
     }
 
-    async fn handle_system(&mut self, system: String) -> Result<()> {
-        if !self.state.assets.is_valid_system(&system, false) {
+    async fn handle_system(&mut self, system: Arc<str>) -> Result<()> {
+        if !self.state.assets.is_valid_system(&system) {
             bail!("invalid system")
         }
         let id = self.get_player()?.with_mut(|player| {
@@ -575,7 +574,7 @@ impl RoomClientState {
             if let (Some(name), id) = player.with(|player| (player.name.clone(), player.id)) {
                 self.broadcast(OutgoingPacket::Name {
                     player_id: id,
-                    name: name.0,
+                    name,
                 })
                 .await?;
             }
@@ -633,7 +632,8 @@ impl RoomClientState {
             }))
             .await?;
             if let Some(other_room_client) = other_room_client {
-                if let Some(position) = &other_room_client.state.lock().await.position {
+                let position = { other_room_client.state.lock().await.position };
+                if let Some(position) = &position {
                     self.send_packet(other.with(|other| OutgoingPacket::Move {
                         player_id: other.id,
                         x: position.x,
@@ -665,7 +665,7 @@ impl RoomClientState {
                 if let Some(name) = { other.read().name.clone() } {
                     self.send_packet(other.with(|other| OutgoingPacket::Name {
                         player_id: other.id,
-                        name: name.0,
+                        name,
                     }))
                     .await?;
                 }

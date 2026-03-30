@@ -2,7 +2,7 @@ use anyhow::Result;
 use serde::Serialize;
 
 use super::ids::PlayerUuid;
-use crate::{player::traits::FetchForPlayerUuid, server::state::AppState};
+use crate::{server::state::AppState, traits::FetchForPlayerUuid};
 
 #[derive(PartialEq, Eq, Debug, Clone, Serialize, Default)]
 pub struct BadgeSlots {

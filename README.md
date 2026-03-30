@@ -98,6 +98,7 @@ this project is bound by the AGPL-3.0 license because it contains a lot of porte
   - [ ] notifications
   - [ ] events
   - [ ] screenshots
+  - [ ] chat history
   - ...
 - [ ] infrastructure
   - [X] database, ask for newer schema dump?

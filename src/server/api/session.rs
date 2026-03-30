@@ -10,13 +10,11 @@ use tokio::sync::mpsc;
 use tracing::instrument;
 
 use crate::{
-    client::Client,
     player::{Player, ids::PlayerUuid},
     server::{
         api::extractors::authentication::OptionalQueryAuthentication, error::AppError,
         state::AppState,
     },
-    session::client::packet::OutgoingPacket,
 };
 
 #[axum::debug_handler]
@@ -42,6 +40,16 @@ async fn handle_connection(
     ip: IpAddr,
     socket: WebSocket,
 ) -> Result<()> {
+    tokio::spawn({
+        let uuid = uuid.clone();
+        async move {
+            Player::update_player_game_data(state, &uuid)
+                .await
+                .unwrap_or_else(|e| {
+                    tracing::error!("failed to update player game data for {uuid}: {e:?}");
+                });
+        }
+    });
     let (outgoing_sender, outgoing_receiver) = mpsc::channel(100);
     let player = Player::new(state, is_authenticated, uuid, ip, outgoing_sender).await?;
     let session_client = player.with(|player| player.session_client.clone());

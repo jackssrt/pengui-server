@@ -19,11 +19,11 @@ use crate::{
         name::PlayerName,
         privacy_settings::PrivacySettings,
         rank::Rank,
-        traits::{FetchForPlayerUuid, MaybeFetchForPlayerUuid},
     },
     room::client::RoomClient,
     server::{players::Players, state::AppState},
     session::{self, client::SessionClient},
+    traits::{FetchForPlayerUuid, MaybeFetchForPlayerUuid},
 };
 
 pub mod badge;
@@ -127,6 +127,17 @@ impl Player {
                 }),
             ))
         }
+    }
+    pub async fn update_player_game_data(
+        state: &'static AppState,
+        uuid: &PlayerUuid,
+    ) -> Result<()> {
+        sqlx::query!(
+            "INSERT INTO playerGameData (uuid, game, online) VALUES (?, ?, 1) ON DUPLICATE KEY UPDATE online = 1, timestampLastActive = UTC_TIMESTAMP()",
+            uuid.0.as_ref(),
+            state.config.game_name
+        ).execute(&state.database.pool).await?;
+        Ok(())
     }
     pub fn is_privated_to(&self, other: &Self) -> bool {
         let PrivacySettings {

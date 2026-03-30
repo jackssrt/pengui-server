@@ -1,26 +1,16 @@
 use std::{fmt::Display, net::IpAddr, sync::Arc};
 
 use anyhow::Result;
+use derive_more::Deref;
 use rand::distr::{Alphanumeric, SampleString};
 use serde::Serialize;
 
-use crate::server::state::AppState;
+use crate::{server::state::AppState, traits::Random};
 
-#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Hash, Debug)]
+#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Hash, Debug, Deref)]
 #[repr(transparent)]
 pub struct PlayerUuid(pub Arc<str>);
-impl AsRef<str> for PlayerUuid {
-    fn as_ref(&self) -> &str {
-        &self.0
-    }
-}
 impl PlayerUuid {
-    pub fn new_random() -> Self {
-        // rand::rng() returns a ThreadRng
-        // which is cryptographically secure
-        // according to the rand crate docs
-        Self(Alphanumeric.sample_string(&mut rand::rng(), 16).into())
-    }
     pub async fn fetch_for_token(state: &AppState, token: &str) -> Result<Option<Self>> {
         let query = sqlx::query!(
             "SELECT uuid FROM playerSessions WHERE sessionId = ? AND NOW() < expiration",
@@ -42,7 +32,7 @@ impl PlayerUuid {
         Ok(if let Some(query) = query {
             Self(query.uuid.into())
         } else {
-            let uuid = Self::new_random();
+            let uuid = Self::random();
             sqlx::query!(
                 "INSERT INTO players (ip, uuid, banned) VALUES (?, ?, ?)",
                 ip,
@@ -57,7 +47,12 @@ impl PlayerUuid {
 }
 impl Default for PlayerUuid {
     fn default() -> Self {
-        Self::new_random()
+        Self("0000000000000000".into())
+    }
+}
+impl Random for PlayerUuid {
+    fn random() -> Self {
+        Self(Alphanumeric.sample_string(&mut rand::rng(), 16).into())
     }
 }
 impl Display for PlayerUuid {

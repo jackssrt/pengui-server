@@ -2,10 +2,7 @@ use anyhow::Result;
 use serde::Serialize;
 use strum::FromRepr;
 
-use crate::{
-    player::{ids::PlayerUuid, traits::FetchForPlayerUuid},
-    server::state::AppState,
-};
+use crate::{player::ids::PlayerUuid, server::state::AppState, traits::FetchForPlayerUuid};
 
 #[derive(FromRepr)]
 #[repr(u8)]

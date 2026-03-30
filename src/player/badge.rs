@@ -2,7 +2,7 @@ use anyhow::Result;
 use serde::Serialize;
 
 use super::ids::PlayerUuid;
-use crate::{player::traits::MaybeFetchForPlayerUuid, server::state::AppState};
+use crate::{server::state::AppState, traits::MaybeFetchForPlayerUuid};
 
 #[derive(PartialEq, Eq, Clone, Debug, Serialize, Default)]
 #[repr(transparent)]

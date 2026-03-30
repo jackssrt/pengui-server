@@ -19,6 +19,7 @@ use tracing::Span;
 
 use crate::server::{
     api::{
+        chat_history::{handle_chat_history, handle_clear_chat_history},
         middleware::{command_query::rewrite_command_query, moderation::moderation_middleware},
         player_info::handle_player_info,
         players::handle_players,
@@ -32,6 +33,7 @@ use crate::server::{
     state::AppState,
 };
 
+mod chat_history;
 mod extractors;
 mod middleware;
 mod player_info;
@@ -72,6 +74,8 @@ where
     let app = Router::new()
         .route("/players", get(handle_players))
         .route("/api/info", get(handle_player_info))
+        .route("/api/chathistory", get(handle_chat_history))
+        .route("/api/clearchathistory", get(handle_clear_chat_history))
         .merge(websockets)
         .merge(authenticated)
         .layer(TraceLayer::new_for_http().on_body_chunk(

@@ -88,14 +88,7 @@ impl Assets {
             x => self.sprites.contains(x),
         }
     }
-    pub fn is_valid_system(&self, name: &String, ignore_single_quotes: bool) -> bool {
-        let name = {
-            if ignore_single_quotes {
-                &name.replace('\'', "")
-            } else {
-                name
-            }
-        };
+    pub fn is_valid_system(&self, name: &str) -> bool {
         self.systems.contains(name)
     }
     pub fn is_valid_sound(&self, name: &str) -> bool {

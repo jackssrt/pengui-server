@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use anyhow::Result;
 use bstr::BString;
 use serde::{Deserialize, Serialize};
@@ -9,6 +11,7 @@ use crate::{
         badge::BadgeName,
         ids::{PlayerId, PlayerUuid},
         medal::Medals,
+        name::PlayerName,
         rank::Rank,
     },
     room::{
@@ -92,7 +95,7 @@ pub enum IncomingPacket {
     #[serde(rename = "h")]
     ChangeSpriteVisibility { is_hidden: bool },
     #[serde(rename = "sys")]
-    ChangeSystemGraphic(String),
+    ChangeSystemGraphic(Arc<str>),
     #[serde(rename = "se")]
     PlaySoundEffect {
         name: String,
@@ -211,7 +214,7 @@ pub enum OutgoingPacket {
     #[serde(rename = "h")]
     ChangeSpriteVisibility(PlayerId, bool),
     #[serde(rename = "sys")]
-    ChangeSystemGraphic(PlayerId, String),
+    ChangeSystemGraphic(PlayerId, Arc<str>),
     #[serde(rename = "se")]
     PlaySoundEffect {
         player_id: PlayerId,
@@ -239,7 +242,7 @@ pub enum OutgoingPacket {
     #[serde(rename = "name")]
     Name {
         player_id: PlayerId,
-        name: String,
+        name: PlayerName,
     },
     #[serde(rename = "c")]
     Connect {

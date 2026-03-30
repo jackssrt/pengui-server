@@ -1,22 +1,25 @@
-use std::sync::{Arc, Weak, nonpoison::RwLock};
+use std::{
+    num::NonZeroU16,
+    sync::{Arc, Weak, nonpoison::RwLock},
+};
 
-use anyhow::{Result, anyhow, bail};
-use rand::distr::{Alphabetic, SampleString};
+use anyhow::{Context, Result, anyhow, bail};
 use serde::Serialize;
+use sqlx::query;
 use strum::EnumIs;
 use tokio::sync::mpsc::Sender;
 
 use crate::{
+    chat::ids::MessageId,
     client::{Client, state::ClientState},
-    locations::Locations,
     player::{
         Player, badge::BadgeName, badge_slots::BadgeSlots, ids::PlayerUuid, medal::Medals,
         name::PlayerName, rank::Rank, screenshot_limit::ScreenshotLimit,
-        traits::FetchForPlayerUuid,
     },
-    room,
+    room::{self},
     server::state::AppState,
     session::client::packet::{IncomingPacket, OutgoingPacket},
+    traits::{FetchForPlayerUuid, Random},
 };
 #[derive(Debug, PartialEq, Eq, Clone, EnumIs)]
 enum ChatChannel {
@@ -54,12 +57,19 @@ impl ClientState for SessionState {
             IncomingPacket::SetName(name) => self.handle_name(name).await,
             IncomingPacket::SetPrivateMode(mode) => self.handle_set_private_mode(mode).await,
             IncomingPacket::ClaimExpeditionLocation { name, is_free } => todo!(),
-            IncomingPacket::Info() => self.handle_info().await,
+            IncomingPacket::GetInfo => self.handle_info().await,
             IncomingPacket::SayMap(content) => self.handle_say(ChatChannel::Map, content).await,
             IncomingPacket::SayGlobal(content) => {
                 self.handle_say(ChatChannel::Global, content).await
             }
             IncomingPacket::SayParty(content) => self.handle_say(ChatChannel::Party, content).await,
+            IncomingPacket::SetPlayerLocation {
+                previous_map_id,
+                previous_locations,
+            } => {
+                self.handle_player_location(previous_map_id, previous_locations)
+                    .await
+            }
             x => {
                 tracing::debug!("unimplemented session packet: {:?}", x);
                 Ok(())
@@ -101,11 +111,12 @@ impl SessionState {
                 && name.len() <= character_limit
                 && name.chars().all(|x| x.is_ascii_alphanumeric()))
             .then(|| {
-                player.name = Some(PlayerName(name.clone()));
+                player.name = Some(PlayerName(name.into()));
                 player.room_client.as_ref().map(|client| {
                     let packet = room::client::packet::OutgoingPacket::Name {
                         player_id: player.id,
-                        name,
+                        #[allow(clippy::unwrap_used)]
+                        name: player.name.as_ref().unwrap().clone(),
                     };
                     (client.clone(), packet)
                 })
@@ -146,13 +157,15 @@ impl SessionState {
         Ok(())
     }
 
-    async fn handle_say(&mut self, channel: ChatChannel, content: String) -> Result<()> {
+    async fn handle_say(&mut self, channel: ChatChannel, content: Arc<str>) -> Result<()> {
+        let content: Arc<str> = content.trim().into();
         // moved up here because this is most likely to trigger, and cheapest to check
         // the original server also only checks byte length
         // meaning you can only fit 4 men kissing emojis with skin tone modifiers in one message </3
         if content.is_empty() || content.len() > 150 {
             bail!("invalid message");
         }
+        // TODO chat filtering
         let player = self.get_player().await?;
         let (name, system) = player.with(|player| {
             if channel.is_map() && player.room_client.is_none() {
@@ -198,10 +211,10 @@ impl SessionState {
 
     async fn do_global_say(
         &mut self,
-        content: String,
+        content: Arc<str>,
         player: &RwLock<Player>,
         name: PlayerName,
-        system: String,
+        system: Arc<str>,
     ) -> Result<()> {
         let room_client = player
             .with(|player| {
@@ -225,8 +238,9 @@ impl SessionState {
                     room_client.position.map(|p| p.y.cast_signed()),
                 )
             } else {
-                (0, 0, Locations::default(), None, None)
+                (0, 0, Arc::default(), None, None)
             };
+        let message_id = MessageId::random();
         let is_banned = player.with(|player| player.moderation_status.is_banned());
         if is_banned {
             self.send_packet(player.with(|player| OutgoingPacket::SayGlobal {
@@ -234,10 +248,10 @@ impl SessionState {
                 content: content.clone(),
                 map_id,
                 previous_map_id,
-                previous_locations,
+                previous_locations: previous_locations.clone(),
                 x: x.unwrap_or(-1),
                 y: y.unwrap_or(-1),
-                message_id: Alphabetic.sample_string(&mut rand::rng(), 12),
+                message_id: message_id.clone(),
             }))
             .await?;
         } else {
@@ -260,19 +274,31 @@ impl SessionState {
                     content: content.clone(),
                     map_id,
                     previous_map_id,
-                    previous_locations,
+                    previous_locations: previous_locations.clone(),
                     x: x.unwrap_or(-1),
                     y: y.unwrap_or(-1),
-                    message_id: Alphabetic.sample_string(&mut rand::rng(), 12),
+                    message_id: message_id.clone(),
                 }))
                 .await;
         }
-        // TODO history
+        let uuid = player.with(|player| player.uuid.clone());
+        query!(
+            "INSERT INTO chatMessages (msgId, game, uuid, mapId, prevMapId, prevLocations, x, y, contents) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            message_id.as_ref(),
+            self.state.config.game_name,
+            uuid.0.as_ref(),
+            map_id,
+            previous_map_id,
+            previous_locations.as_ref(),
+            x.unwrap_or(-1),
+            y.unwrap_or(-1),
+            content.as_ref(),
+        ).execute(&self.state.database.pool).await?;
         // TODO webhook
         Ok(())
     }
 
-    async fn do_map_say(&mut self, content: String, player: &RwLock<Player>) -> Result<()> {
+    async fn do_map_say(&mut self, content: Arc<str>, player: &RwLock<Player>) -> Result<()> {
         if !player.read().moderation_status.is_banned() {
             // checked before that room client exists, so we can unwrap here
             #[allow(clippy::unwrap_used)]
@@ -317,6 +343,28 @@ impl SessionState {
             content,
         }))
         .await?;
+        Ok(())
+    }
+
+    async fn handle_player_location(
+        &self,
+        previous_map_id: u16,
+        previous_locations: String,
+    ) -> Result<()> {
+        let player = self.get_player().await?;
+        let room_client = player
+            .with(|player| player.room_client.clone())
+            .context("room client does not exist")?;
+        let mut state = room_client.state.lock().await;
+        // this might cause problems in the future idk
+        // the original server doesn't do this
+        state.previous_map_id = self.state.assets.is_valid_map_id(
+            NonZeroU16::try_from(previous_map_id).context("invalid previous map id")?,
+        );
+        state.previous_locations = previous_locations.into();
+
+        // TODO conditions
+
         Ok(())
     }
 }

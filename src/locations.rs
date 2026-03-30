@@ -2,9 +2,8 @@ use futures_util::{StreamExt, TryStreamExt};
 use serde::Serialize;
 
 use crate::{
-    locations::ids::LocationId,
-    player::{ids::PlayerUuid, traits::FetchForPlayerUuid},
-    server::state::AppState,
+    locations::ids::LocationId, player::ids::PlayerUuid, server::state::AppState,
+    traits::FetchForPlayerUuid,
 };
 
 pub mod ids;

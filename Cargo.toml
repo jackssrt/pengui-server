@@ -12,13 +12,14 @@ axum-extra = { version = "0.12.5", features = ["typed-header"] }
 bstr = "1.12.1"
 chrono = { version = "0.4.44", features = ["serde"] }
 clap = { version = "4.5.60", features = ["derive"] }
+derive_more = { version = "2.1.1", features = ["deref"] }
 futures-util = { version = "0.3.32", default-features = false, features = ["sink", "std"] }
 rand = "0.10.0"
 serde = { version = "1.0.228", features = ["serde_derive"] }
 serde_json = "1.0.149"
 serde_repr = "0.1.20"
 sha1 = "0.10.6"
-sqlx = { version = "0.8.6", features = ["mysql", "runtime-tokio"] }
+sqlx = { version = "0.8.6", features = ["mysql", "runtime-tokio", "chrono"] }
 strum = { version = "0.27.2", features = ["derive"] }
 tokio = { version = "1.49.0", features = ["full"] }
 tokio-util = { version = "0.7.18", features = ["io"] }

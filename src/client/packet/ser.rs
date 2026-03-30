@@ -240,26 +240,56 @@ impl Serializer for PacketSerializer {
 }
 #[cfg(test)]
 mod test {
+
     use super::*;
-    use crate::{player::ids::PlayerId, room::client::packet::OutgoingPacket};
+    use crate::{
+        chat::ids::MessageId,
+        player::ids::{PlayerId, PlayerUuid},
+        room::client::packet::OutgoingPacket as RoomOutgoingPacket,
+        session::client::packet::OutgoingPacket as SessionOutgoingPacket,
+    };
     #[test]
     fn test() {
-        let packets_and_serialized = [
+        let room_packet_tests = [
             (
-                OutgoingPacket::Jump {
+                RoomOutgoingPacket::Jump {
                     player_id: PlayerId(10),
                     x: 20,
                     y: 1,
                 },
-                bstr::B(b"jmp\xff\xff10\xff\xff20\xff\xff1"),
+                bstr::B("jmp\u{FFFF}10\u{FFFF}20\u{FFFF}1"),
             ),
             (
-                OutgoingPacket::BattleAnimation(PlayerId(999), 99),
-                bstr::B(b"ba\xff\xff999\xff\xff99"),
+                RoomOutgoingPacket::BattleAnimation(PlayerId(999), 99),
+                bstr::B("ba\u{FFFF}999\u{FFFF}99"),
             ),
         ];
-        for (packet, result) in &packets_and_serialized {
-            let serializer = PacketSerializer::new(b"\xFF\xFF");
+        for (packet, result) in room_packet_tests {
+            let serializer = PacketSerializer::new(bstr::B("\u{FFFF}"));
+
+            assert_eq!(
+                packet.serialize(serializer),
+                Ok(BString::new(result.to_vec()))
+            );
+        }
+        let session_packet_tests = [(
+            SessionOutgoingPacket::SayGlobal {
+                uuid: PlayerUuid::default(),
+                map_id: 10,
+                previous_map_id: 10,
+                previous_locations: "text".into(),
+                x: 5,
+                y: 10,
+                content: "chat message".into(),
+                message_id: MessageId("sdfasdf".into()),
+            },
+            bstr::B(
+                "gsay\u{FFFF}0000000000000000\u{FFFF}10\u{FFFF}10\u{FFFF}text\u{FFFF}5\u{FFFF}10\u{FFFF}chat message\u{FFFF}sdfasdf",
+            ),
+        )];
+
+        for (packet, result) in session_packet_tests {
+            let serializer = PacketSerializer::new(bstr::B("\u{FFFF}"));
 
             assert_eq!(
                 packet.serialize(serializer),

@@ -6,24 +6,18 @@ use std::{
     },
 };
 
-use rand::{
-    distr::{Alphabetic, Alphanumeric, SampleString},
-    rngs::ThreadRng,
-};
-
 use crate::{
+    chat::ids::MessageId,
     client::Client,
-    locations::{Locations, ids::LocationId},
     player::{
         Player,
-        badge::BadgeName,
         ids::{PlayerId, PlayerUuid},
         medal::Medals,
         name::PlayerName,
         rank::Rank,
     },
-    room::ids::MapId,
     session,
+    traits::Random,
 };
 #[derive(Default)]
 pub struct Players {
@@ -71,12 +65,12 @@ impl Players {
                 });
             });
     }
-    pub async fn broadcast_system_message(&self, message: String) {
-        let uuid = PlayerUuid("0000000000000000".into());
+    pub async fn broadcast_system_message(&self, message: Arc<str>) {
+        let uuid = PlayerUuid::default();
         self.broadcast_session_packet(session::client::packet::OutgoingPacket::PlayerInfo {
             uuid: uuid.clone(),
             name: PlayerName("YNO".into()),
-            system: String::new(),
+            system: Arc::default(),
             rank: Rank::Developer,
             is_authenticated: true,
             badge: None,
@@ -88,11 +82,11 @@ impl Players {
                 uuid,
                 map_id: 0,
                 previous_map_id: 0,
-                previous_locations: Locations(vec![LocationId(0)]),
+                previous_locations: Arc::default(),
                 x: 0,
                 y: 0,
                 content: message,
-                message_id: Alphabetic.sample_string(&mut rand::rng(), 12),
+                message_id: MessageId::random(),
             }
         })
         .await;
