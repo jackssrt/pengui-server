@@ -4,3 +4,4 @@
 /sockets
 key.bin
 /logs
+/rustc-ice-*.txt
