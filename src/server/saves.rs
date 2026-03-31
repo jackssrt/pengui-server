@@ -13,7 +13,7 @@ use crate::{player::ids::PlayerUuid, server::state::AppState};
 const SAVES_DIRECTORY: &str = "saves";
 fn get_player_save_data_path(state: &AppState, player_uuid: &PlayerUuid) -> PathBuf {
     PathBuf::from(SAVES_DIRECTORY)
-        .join(&state.config.game_name)
+        .join(&*state.config.game_name)
         .join(format!("{player_uuid}.osd"))
 }
 

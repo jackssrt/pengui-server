@@ -126,13 +126,16 @@ pub async fn get_chat_history(
             badge: row.badge,
             is_authenticated: row.is_authenticated != 0,
             rank: row.rank,
-            medals: Medals([
-                row.medal_count_bronze.unwrap_or_default(),
-                row.medal_count_silver.unwrap_or_default(),
-                row.medal_count_gold.unwrap_or_default(),
-                row.medal_count_platinum.unwrap_or_default(),
-                row.medal_count_diamond.unwrap_or_default(),
-            ]),
+            medals: Medals(
+                [
+                    row.medal_count_bronze.unwrap_or_default(),
+                    row.medal_count_silver.unwrap_or_default(),
+                    row.medal_count_gold.unwrap_or_default(),
+                    row.medal_count_platinum.unwrap_or_default(),
+                    row.medal_count_diamond.unwrap_or_default(),
+                ]
+                .into(),
+            ),
         })
         .collect()
         .await;

@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use anyhow::Result;
 use serde::Serialize;
 
@@ -6,7 +8,7 @@ use crate::{server::state::AppState, traits::MaybeFetchForPlayerUuid};
 
 #[derive(PartialEq, Eq, Clone, Debug, Serialize, Default)]
 #[repr(transparent)]
-pub struct BadgeName(pub String);
+pub struct BadgeName(pub Arc<str>);
 
 impl MaybeFetchForPlayerUuid for BadgeName {
     async fn fetch_for_player_uuid(
@@ -19,6 +21,6 @@ impl MaybeFetchForPlayerUuid for BadgeName {
         )
         .fetch_optional(&state.database.pool)
         .await?
-        .map(|x| Self(x.badge)))
+        .map(|x| Self(x.badge.into())))
     }
 }

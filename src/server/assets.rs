@@ -16,10 +16,10 @@ pub struct Assets {
     config: Arc<Config>,
 
     pub maps: BTreeSet<MapId>,
-    pub sprites: HashSet<String>,
-    pub systems: HashSet<String>,
-    pub sounds: HashSet<String>,
-    pub pictures: HashSet<String>,
+    pub sprites: HashSet<Box<str>>,
+    pub systems: HashSet<Box<str>>,
+    pub sounds: HashSet<Box<str>>,
+    pub pictures: HashSet<Box<str>>,
 }
 
 impl Assets {
@@ -56,13 +56,13 @@ impl Assets {
             .map(MapId)
             .collect())
     }
-    fn get_sprites(config: &Config) -> Result<HashSet<String>> {
+    fn get_sprites(config: &Config) -> Result<HashSet<Box<str>>> {
         get_stems("CharSet", &config.game_path)
     }
-    fn get_systems(config: &Config) -> Result<HashSet<String>> {
+    fn get_systems(config: &Config) -> Result<HashSet<Box<str>>> {
         get_stems("System", &config.game_path)
     }
-    fn get_sounds(config: &Config) -> HashSet<String> {
+    fn get_sounds(config: &Config) -> HashSet<Box<str>> {
         let path = config.game_path.join("Sound");
         #[allow(clippy::unwrap_used)]
         WalkDir::new(&path)
@@ -70,11 +70,16 @@ impl Assets {
             .filter_map(Result::ok)
             .filter(|x| x.metadata().is_ok_and(|x| !x.is_dir()))
             .map(|x| x.path().strip_prefix(&path).unwrap().with_extension(""))
-            .filter_map(|x| Some([x.to_str()?.into(), x.to_str()?.replacen('/', "\\", 1)]))
+            .filter_map(|x| {
+                Some([
+                    x.to_str()?.into(),
+                    x.to_str()?.replacen('/', "\\", 1).into_boxed_str(),
+                ])
+            })
             .flatten()
             .collect()
     }
-    fn get_pictures(config: &Config) -> Result<HashSet<String>> {
+    fn get_pictures(config: &Config) -> Result<HashSet<Box<str>>> {
         get_stems("Picture", &config.game_path)
     }
     pub fn is_valid_map_id(&self, id: NonZeroU16) -> Option<MapId> {
@@ -107,7 +112,7 @@ impl Assets {
                 .config
                 .picture_prefixes
                 .iter()
-                .any(|prefix| name.starts_with(prefix)) =>
+                .any(|prefix| name.starts_with(&**prefix)) =>
             {
                 true
             }
@@ -116,11 +121,11 @@ impl Assets {
     }
 }
 
-fn get_stems(subdir: &str, game_path: &Path) -> Result<HashSet<String>> {
+fn get_stems(subdir: &str, game_path: &Path) -> Result<HashSet<Box<str>>> {
     let path = game_path.join(subdir);
     Ok(std::fs::read_dir(path)?
         .filter_map(|x| x.ok().map(|x| x.path()))
         .filter_map(|x| x.file_stem().map(ToOwned::to_owned))
-        .filter_map(|x| Some(x.to_str()?.to_owned()))
+        .filter_map(|x| Some(x.to_str()?.into()))
         .collect())
 }

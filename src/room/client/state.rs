@@ -54,12 +54,12 @@ pub struct RoomClientState {
     pub speed: Option<u8>,
     pub position: Option<Position>,
     pub sync_coords: bool,
-    pub flash: Option<Flash>,
+    pub flash: Option<Arc<Flash>>,
     pub transparency: u8,
     pub is_hidden: bool,
     switch_cache: BTreeMap<SwitchId, bool>,
     variable_cache: BTreeMap<VariableId, u16>,
-    pub saved_picture: Option<SavedPicture>,
+    pub saved_picture: Option<Arc<SavedPicture>>,
     pub cryptography: Cryptography,
     pub previous_map_id: Option<MapId>,
     pub previous_locations: Arc<str>,
@@ -287,7 +287,7 @@ impl RoomClientState {
         Ok(())
     }
 
-    async fn handle_sprite(&mut self, sprite: String, sprite_index: u32) -> Result<()> {
+    async fn handle_sprite(&mut self, sprite: Arc<str>, sprite_index: u32) -> Result<()> {
         if !self.state.assets.is_valid_sprite(&sprite) {
             return Err(anyhow!("invalid sprite"));
         }
@@ -319,6 +319,7 @@ impl RoomClientState {
     }
 
     async fn handle_repeating_flash(&mut self, flash: Flash) -> Result<()> {
+        let flash = Arc::new(flash);
         self.flash = Some(flash.clone());
         self.broadcast(
             self.get_player()?
@@ -376,7 +377,7 @@ impl RoomClientState {
 
     async fn handle_play_sound_effect(
         &mut self,
-        name: String,
+        name: Arc<str>,
         volume: u8,
         tempo: u16,
         balance: u8,
@@ -458,6 +459,7 @@ impl RoomClientState {
         picture_data: PictureData,
         extra_picture_data: ExtraPictureData,
     ) -> Result<()> {
+        let extra_picture_data = Arc::new(extra_picture_data);
         // TODO: tbh this whole picture system feels weird
         // since i don't really know how it's used
         // there's prob a lot of bugs in here
@@ -482,9 +484,9 @@ impl RoomClientState {
         let green = picture_data.green.min(200);
         let blue = picture_data.blue.min(200);
         let saturation = picture_data.saturation.min(200);
-        let saved_picture = if let ExtraPictureData::Add(ref add_picture_data) = extra_picture_data
+        let saved_picture = if let ExtraPictureData::Add(ref add_picture_data) = *extra_picture_data
         {
-            SavedPicture(
+            Arc::new(SavedPicture(
                 PictureData {
                     red,
                     green,
@@ -493,14 +495,14 @@ impl RoomClientState {
                     ..picture_data
                 },
                 add_picture_data.clone(),
-            )
+            ))
         } else {
             self.saved_picture
                 .take()
                 .ok_or_else(|| anyhow!("tried to modify non-existant picture"))?
         };
 
-        self.broadcast(match extra_picture_data {
+        self.broadcast(match *extra_picture_data {
             ExtraPictureData::Add(_) => OutgoingPacket::AddPicture {
                 picture_data: saved_picture.0.clone(),
                 add_picture_data: saved_picture.1.clone(),
@@ -520,7 +522,7 @@ impl RoomClientState {
 
     async fn handle_remove_picture(&mut self, id: u16) -> Result<()> {
         self.saved_picture
-            .take_if(|SavedPicture(PictureData { id: x, .. }, ..)| *x == id);
+            .take_if(|saved_picture| saved_picture.0.id == id);
         Ok(())
     }
 

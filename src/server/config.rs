@@ -1,8 +1,4 @@
-use std::{
-    collections::HashSet,
-    path::{Path, PathBuf},
-    time::Duration,
-};
+use std::{collections::HashSet, path::Path, time::Duration};
 
 use anyhow::Result;
 use serde::Deserialize;
@@ -14,25 +10,25 @@ const MAIN_GAME_ID: &str = "2kki";
 #[derive(Deserialize, PartialEq, Eq, Debug)]
 pub struct Config {
     // game
-    pub game_name: String,
-    pub game_path: PathBuf,
+    pub game_name: Box<str>,
+    pub game_path: Box<Path>,
 
     // database
-    pub db_user: String,
-    pub db_pass: String,
-    pub db_addr: String,
-    pub db_name: String,
+    pub db_user: Box<str>,
+    pub db_pass: Box<str>,
+    pub db_addr: Box<str>,
+    pub db_name: Box<str>,
 
-    pub sp_rooms: Vec<MapId>,
-    pub bad_sounds: HashSet<String>,
-    pub pictures: HashSet<String>,
-    pub picture_prefixes: Vec<String>,
+    pub sp_rooms: Box<[MapId]>,
+    pub bad_sounds: HashSet<Box<str>>,
+    pub pictures: HashSet<Box<str>>,
+    pub picture_prefixes: Box<[Box<str>]>,
     #[serde(rename = "battle_anim_ids")]
     pub battle_animation_ids: HashSet<u64>,
 
     // webhooks
-    pub chat_webhook: String,
-    pub screenshot_webhook: String,
+    pub chat_webhook: Box<str>,
+    pub screenshot_webhook: Box<str>,
 
     // moderation
     pub moderation: Option<Moderation>,
@@ -49,7 +45,7 @@ pub struct Config {
 }
 impl Config {
     pub fn is_2kki(&self) -> bool {
-        self.game_name == "2kki"
+        *self.game_name == *"2kki"
     }
     pub fn is_main_server(&self) -> bool {
         self.is_2kki()
@@ -65,10 +61,10 @@ impl Config {
 #[derive(Deserialize, PartialEq, Eq, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct Moderation {
-    pub bot_token: String,
-    pub guild_id: String,
-    pub channel_id: String,
-    pub mod_role_id: String,
+    pub bot_token: Box<str>,
+    pub guild_id: Box<str>,
+    pub channel_id: Box<str>,
+    pub mod_role_id: Box<str>,
 }
 #[derive(Deserialize, PartialEq, Eq, Debug)]
 #[serde(rename_all = "camelCase")]
@@ -86,8 +82,8 @@ impl Default for Ipc {
 #[derive(Deserialize, PartialEq, Eq, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct VapidKeys {
-    pub private: String,
-    pub public: String,
+    pub private: Box<str>,
+    pub public: Box<str>,
 }
 
 #[derive(Deserialize, PartialEq, Eq, Debug)]

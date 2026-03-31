@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use anyhow::Result;
 use serde::Serialize;
 use strum::FromRepr;
@@ -16,7 +18,7 @@ pub enum Medal {
 
 // index with Medal
 #[derive(Default, Serialize, Clone, Debug)]
-pub struct Medals(pub [i8; 5]);
+pub struct Medals(pub Arc<[i8; 5]>);
 
 impl FetchForPlayerUuid for Medals {
     async fn fetch_for_player_uuid(state: &AppState, player_uuid: &PlayerUuid) -> Result<Self> {
@@ -26,7 +28,7 @@ impl FetchForPlayerUuid for Medals {
         ).fetch_optional(&state.database.pool).await?;
 
         Ok(query.map_or_else(Self::default, |query| {
-            Self(
+            Self(Arc::new(
                 ([
                     query.medalCountBronze,
                     query.medalCountSilver,
@@ -35,7 +37,7 @@ impl FetchForPlayerUuid for Medals {
                     query.medalCountDiamond,
                 ])
                 .map(|x| x.unwrap_or(0)),
-            )
+            ))
         }))
     }
 }

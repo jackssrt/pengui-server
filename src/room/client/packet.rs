@@ -39,7 +39,7 @@ pub struct PictureData {
     pub saturation: u64,
     pub effect_mode: u64,
     pub effect_power: i64,
-    pub picture_name: String,
+    pub picture_name: Arc<str>,
 }
 #[allow(clippy::struct_excessive_bools)]
 #[derive(Deserialize, Debug, PartialEq, Eq, Clone, Serialize)]
@@ -83,7 +83,7 @@ pub enum IncomingPacket {
     #[serde(rename = "spd")]
     ChangeSpeed(u8),
     #[serde(rename = "spr")]
-    ChangeSprite { name: String, index: u32 },
+    ChangeSprite { name: Arc<str>, index: u32 },
     #[serde(rename = "fl")]
     PlayerFlash(Flash),
     #[serde(rename = "rfl")]
@@ -98,7 +98,7 @@ pub enum IncomingPacket {
     ChangeSystemGraphic(Arc<str>),
     #[serde(rename = "se")]
     PlaySoundEffect {
-        name: String,
+        name: Arc<str>,
         volume: u8,
         tempo: u16,
         balance: u8,
@@ -155,10 +155,10 @@ pub enum OutgoingPacket {
     #[serde(rename = "pns")]
     SyncPictureNames {
         is_prefixes: bool,
-        values: Vec<String>,
+        values: Vec<Arc<str>>,
     },
     #[serde(rename = "bas")]
-    SyncBattleAnimations(Vec<String>),
+    SyncBattleAnimations(Vec<Arc<str>>),
     #[serde(rename = "anc")]
     AnimationCommand(PlayerId, AnimationCommand),
     #[serde(rename = "m")]
@@ -187,7 +187,7 @@ pub enum OutgoingPacket {
     #[serde(rename = "spr")]
     ChangeSprite {
         player_id: PlayerId,
-        name: String,
+        name: Arc<str>,
         index: u32,
     },
     #[serde(rename = "spd")]
@@ -205,7 +205,7 @@ pub enum OutgoingPacket {
     RepeatingPlayerFlash {
         player_id: PlayerId,
         #[serde(flatten)]
-        flash: Flash,
+        flash: Arc<Flash>,
     },
     #[serde(rename = "rrfl")]
     RemoveRepeatingPlayerFlash(PlayerId),
@@ -218,7 +218,7 @@ pub enum OutgoingPacket {
     #[serde(rename = "se")]
     PlaySoundEffect {
         player_id: PlayerId,
-        name: String,
+        name: Arc<str>,
         volume: u8,
         tempo: u16,
         balance: u8,
