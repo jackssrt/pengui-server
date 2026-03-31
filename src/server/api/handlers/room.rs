@@ -19,8 +19,9 @@ use crate::{
         client::{RoomClient, packet::OutgoingPacket},
     },
     server::{
-        api::extractors::authentication::OptionalQueryAuthentication, error::AppError,
-        rooms::Rooms, state::AppState,
+        api::extractors::authentication::OptionalQueryAuthentication,
+        error::AppError,
+        state::{AppState, Rooms},
     },
 };
 

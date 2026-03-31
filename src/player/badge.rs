@@ -3,8 +3,8 @@ use std::sync::Arc;
 use anyhow::Result;
 use serde::Serialize;
 
-use super::ids::PlayerUuid;
-use crate::{server::state::AppState, traits::MaybeFetchForPlayerUuid};
+use super::{ids::PlayerUuid, traits::MaybeFetchForPlayerUuid};
+use crate::server::state::AppState;
 
 #[derive(PartialEq, Eq, Clone, Debug, Serialize, Default)]
 #[repr(transparent)]

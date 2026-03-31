@@ -19,11 +19,11 @@ use crate::{
         name::PlayerName,
         privacy_settings::PrivacySettings,
         rank::Rank,
+        traits::{FetchForPlayerUuid, MaybeFetchForPlayerUuid},
     },
     room::client::RoomClient,
-    server::{players::Players, state::AppState},
+    server::state::{AppState, players::Players},
     session::{self, client::SessionClient},
-    traits::{FetchForPlayerUuid, MaybeFetchForPlayerUuid},
 };
 
 pub mod badge;
@@ -33,6 +33,7 @@ pub mod disconnected;
 pub mod friends;
 pub mod game_data;
 pub mod ids;
+pub mod locations;
 pub mod medal;
 pub mod moderation_status;
 pub mod name;

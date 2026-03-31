@@ -4,7 +4,8 @@ use anyhow::Result;
 use serde::Serialize;
 use strum::FromRepr;
 
-use crate::{player::ids::PlayerUuid, server::state::AppState, traits::FetchForPlayerUuid};
+use super::{ids::PlayerUuid, traits::FetchForPlayerUuid};
+use crate::server::state::AppState;
 
 #[derive(FromRepr)]
 #[repr(u8)]

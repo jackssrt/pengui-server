@@ -22,7 +22,7 @@ use crate::{
         },
         ids::{MapId, SwitchId, VariableId},
     },
-    server::{rooms::Rooms, state::AppState},
+    server::state::{AppState, rooms::Rooms},
 };
 
 #[derive(Debug, PartialEq, Eq, Clone, EnumIs)]

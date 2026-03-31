@@ -9,7 +9,7 @@ use crate::{
     chat::ids::MessageId,
     party::ids::PartyId,
     player::medal::Medals,
-    server::{database::Database, state::AppState},
+    server::state::{AppState, database::Database},
 };
 
 pub fn init_history(state: &'static AppState) {

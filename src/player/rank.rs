@@ -2,7 +2,8 @@ use anyhow::{Result, anyhow};
 use serde_repr::{Deserialize_repr, Serialize_repr};
 use strum::{EnumIs, FromRepr};
 
-use crate::{player::ids::PlayerUuid, server::state::AppState, traits::FetchForPlayerUuid};
+use super::{ids::PlayerUuid, traits::FetchForPlayerUuid};
+use crate::server::state::AppState;
 
 #[derive(
     Deserialize_repr,

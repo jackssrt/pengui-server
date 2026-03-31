@@ -6,12 +6,11 @@ use axum::{
 };
 
 use crate::{
-    player::moderation_status::ModerationStatus,
+    player::{moderation_status::ModerationStatus, traits::FetchForPlayerUuid},
     server::{
         api::extractors::authentication::{Authentication, HeaderAuthentication},
         state::AppState,
     },
-    traits::FetchForPlayerUuid,
 };
 
 #[axum::debug_middleware]

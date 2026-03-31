@@ -19,28 +19,25 @@ use tracing::Span;
 
 use crate::server::{
     api::{
-        chat_history::{handle_chat_history, handle_clear_chat_history},
-        middleware::{command_query::rewrite_command_query, moderation::moderation_middleware},
-        player_info::handle_player_info,
-        players::handle_players,
-        room::handle_room,
-        save_sync::{
-            handle_savesync_clear, handle_savesync_get, handle_savesync_push,
-            handle_savesync_timestamp,
+        handlers::{
+            chat_history::{handle_chat_history, handle_clear_chat_history},
+            player_info::handle_player_info,
+            players::handle_players,
+            room::handle_room,
+            save_sync::{
+                handle_savesync_clear, handle_savesync_get, handle_savesync_push,
+                handle_savesync_timestamp,
+            },
+            session::handle_session,
         },
-        session::handle_session,
+        middleware::{command_query::rewrite_command_query, moderation::moderation_middleware},
     },
     state::AppState,
 };
 
-mod chat_history;
 mod extractors;
+mod handlers;
 mod middleware;
-mod player_info;
-mod players;
-mod room;
-mod save_sync;
-mod session;
 
 // feel free to change :D
 static ALLOWED_ORIGINS: &[&str] = &["http://localhost:*", "https://ynoproject.net"];

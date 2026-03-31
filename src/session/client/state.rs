@@ -15,11 +15,11 @@ use crate::{
     player::{
         Player, badge::BadgeName, badge_slots::BadgeSlots, ids::PlayerUuid, medal::Medals,
         name::PlayerName, rank::Rank, screenshot_limit::ScreenshotLimit,
+        traits::FetchForPlayerUuid,
     },
     room::{self, client::RoomClient},
     server::state::AppState,
-    session::client::packet::{IncomingPacket, OutgoingPacket},
-    traits::{FetchForPlayerUuid, Random},
+    session::client::packet::{IncomingPacket, OutgoingPacket}, traits::Random,
 };
 #[derive(Debug, PartialEq, Eq, Clone, EnumIs)]
 enum ChatChannel {
@@ -73,7 +73,7 @@ impl ClientState for SessionState {
                 self.handle_location_color(location_name).await
             }
             x @ (IncomingPacket::ClaimExpeditionLocation { .. }
-            | IncomingPacket::GetExpeditions { .. }) => {
+            | IncomingPacket::GetExpeditions) => {
                 tracing::debug!("unimplemented session packet: {:?}", x);
                 Ok(())
             }
@@ -364,7 +364,7 @@ impl SessionState {
         state.previous_map_id = self.state.assets.is_valid_map_id(
             NonZeroU16::try_from(previous_map_id).context("invalid previous map id")?,
         );
-        state.previous_locations = previous_locations.into();
+        state.previous_locations = previous_locations;
 
         // TODO conditions
 

@@ -1,8 +1,8 @@
 use anyhow::Result;
 use serde::Serialize;
 
-use super::ids::PlayerUuid;
-use crate::{server::state::AppState, traits::FetchForPlayerUuid};
+use super::{ids::PlayerUuid, traits::FetchForPlayerUuid};
+use crate::server::state::AppState;
 
 #[derive(Debug, Clone, PartialEq, Eq, Default, PartialOrd, Ord, Serialize)]
 #[repr(transparent)]

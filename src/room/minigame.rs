@@ -1,7 +1,7 @@
 use anyhow::Result;
 use serde::Serialize;
 
-use crate::server::{config::Config, database::Database};
+use crate::server::state::{config::Config, database::Database};
 
 #[derive(Serialize, Default)]
 #[serde(rename_all = "camelCase")]

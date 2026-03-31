@@ -3,16 +3,21 @@ use axum_client_ip::RightmostXForwardedFor;
 use serde::Serialize;
 
 use crate::{
-    locations::Locations,
     player::{
-        badge::BadgeName, badge_slots::BadgeSlots, ids::PlayerUuid, medal::Medals,
-        name::PlayerName, rank::Rank, screenshot_limit::ScreenshotLimit,
+        badge::BadgeName,
+        badge_slots::BadgeSlots,
+        ids::PlayerUuid,
+        locations::Locations,
+        medal::Medals,
+        name::PlayerName,
+        rank::Rank,
+        screenshot_limit::ScreenshotLimit,
+        traits::{FetchForPlayerUuid, MaybeFetchForPlayerUuid},
     },
     server::{
         api::extractors::authentication::OptionalHeaderAuthentication, error::AppError,
         state::AppState,
     },
-    traits::{FetchForPlayerUuid, MaybeFetchForPlayerUuid},
 };
 
 #[derive(Serialize)]

@@ -1,7 +1,10 @@
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
 
-use crate::{player::ids::PlayerUuid, server::state::AppState, traits::MaybeFetchForPlayerUuid};
+use crate::{
+    player::{ids::PlayerUuid, traits::MaybeFetchForPlayerUuid},
+    server::state::AppState,
+};
 
 #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Serialize, Debug, Deserialize)]
 #[repr(transparent)]

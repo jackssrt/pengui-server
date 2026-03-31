@@ -9,7 +9,7 @@ use std::{
 use anyhow::Result;
 use walkdir::WalkDir;
 
-use crate::{room::ids::MapId, server::config::Config};
+use crate::{room::ids::MapId, server::state::config::Config};
 
 #[derive(Debug)]
 pub struct Assets {
