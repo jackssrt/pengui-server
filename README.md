@@ -81,7 +81,7 @@ this project is bound by the AGPL-3.0 license because it contains a lot of porte
     - [ ] claiming
   - [X] setting private mode
   - [X] player info
-  - [ ] entering locations
+  - [X] entering locations
   - [ ] friends list
   - [ ] parties
   - [ ] events

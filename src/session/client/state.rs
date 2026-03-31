@@ -16,7 +16,7 @@ use crate::{
         Player, badge::BadgeName, badge_slots::BadgeSlots, ids::PlayerUuid, medal::Medals,
         name::PlayerName, rank::Rank, screenshot_limit::ScreenshotLimit,
     },
-    room::{self},
+    room::{self, client::RoomClient},
     server::state::AppState,
     session::client::packet::{IncomingPacket, OutgoingPacket},
     traits::{FetchForPlayerUuid, Random},
@@ -56,7 +56,6 @@ impl ClientState for SessionState {
         match packet {
             IncomingPacket::SetName(name) => self.handle_name(name).await,
             IncomingPacket::SetPrivateMode(mode) => self.handle_set_private_mode(mode).await,
-            IncomingPacket::ClaimExpeditionLocation { name, is_free } => todo!(),
             IncomingPacket::GetInfo => self.handle_info().await,
             IncomingPacket::SayMap(content) => self.handle_say(ChatChannel::Map, content).await,
             IncomingPacket::SayGlobal(content) => {
@@ -70,7 +69,11 @@ impl ClientState for SessionState {
                 self.handle_player_location(previous_map_id, previous_locations)
                     .await
             }
-            x => {
+            IncomingPacket::SetLocationColor { location_name } => {
+                self.handle_location_color(location_name).await
+            }
+            x @ (IncomingPacket::ClaimExpeditionLocation { .. }
+            | IncomingPacket::GetExpeditions { .. }) => {
                 tracing::debug!("unimplemented session packet: {:?}", x);
                 Ok(())
             }
@@ -103,7 +106,7 @@ impl SessionState {
             .upgrade()
             .ok_or_else(|| anyhow!("invalid player"))
     }
-    async fn handle_name(&self, name: String) -> Result<()> {
+    async fn handle_name(&self, name: Arc<str>) -> Result<()> {
         let player = self.get_player().await?;
         if let Some((client, packet)) = player.with_mut(|player| {
             let character_limit = if player.is_authenticated { 12 } else { 10 };
@@ -111,7 +114,7 @@ impl SessionState {
                 && name.len() <= character_limit
                 && name.chars().all(|x| x.is_ascii_alphanumeric()))
             .then(|| {
-                player.name = Some(PlayerName(name.into()));
+                player.name = Some(PlayerName(name));
                 player.room_client.as_ref().map(|client| {
                     let packet = room::client::packet::OutgoingPacket::Name {
                         player_id: player.id,
@@ -349,7 +352,7 @@ impl SessionState {
     async fn handle_player_location(
         &self,
         previous_map_id: u16,
-        previous_locations: String,
+        previous_locations: Arc<str>,
     ) -> Result<()> {
         let player = self.get_player().await?;
         let room_client = player
@@ -366,5 +369,25 @@ impl SessionState {
         // TODO conditions
 
         Ok(())
+    }
+
+    async fn handle_location_color(&self, location_name: Arc<str>) -> Result<()> {
+        let _ = self.get_room_client().await?;
+        // TODO events
+        // self.send_packet(if let Some(location_color) = event.game_location_colors.get(&location_name) {
+        //     OutgoingPacket::LocationColor { key: location_color.key.clone(), value: location_color.value.clone() }
+        // } else {
+        //     OutgoingPacket::LocationColor { key: Arc::default(), value: Arc::default() }
+        // }).await?;
+
+        Ok(())
+    }
+
+    async fn get_room_client(&self) -> Result<Arc<RoomClient>> {
+        let player = self.get_player().await?;
+        let room_client = player
+            .with(|player| player.room_client.clone())
+            .context("room client does not exist")?;
+        Ok(room_client)
     }
 }

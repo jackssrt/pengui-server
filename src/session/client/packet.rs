@@ -15,7 +15,7 @@ pub enum IncomingPacket {
     #[serde(rename = "e")]
     GetExpeditions,
     #[serde(rename = "name")]
-    SetName(String),
+    SetName(Arc<str>),
     #[serde(rename = "say")]
     SayMap(Arc<str>),
     #[serde(rename = "psay")]
@@ -25,14 +25,16 @@ pub enum IncomingPacket {
     #[serde(rename = "pr")]
     SetPrivateMode(u8),
     #[serde(rename = "eec")]
-    ClaimExpeditionLocation { name: String, is_free: bool },
+    ClaimExpeditionLocation { name: Arc<str>, is_free: bool },
     #[serde(rename = "i")]
     GetInfo,
     #[serde(rename = "ploc")]
     SetPlayerLocation {
         previous_map_id: u16,
-        previous_locations: String,
+        previous_locations: Arc<str>,
     },
+    #[serde(rename = "lcol")]
+    SetLocationColor { location_name: Arc<str> },
 }
 impl IncomingPacket {
     pub fn from_bstr(slice: &BStr) -> Result<Self, PacketError> {
@@ -78,6 +80,8 @@ pub enum OutgoingPacket {
         content: Arc<str>,
         message_id: MessageId,
     },
+    #[serde(rename = "lcol")]
+    LocationColor { key: Arc<str>, value: Arc<str> },
 }
 impl OutgoingPacket {
     pub fn into_bstring(self) -> Result<BString, PacketError> {
