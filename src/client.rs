@@ -25,7 +25,7 @@ where
     async fn run(
         mut socket: WebSocket,
         state: Arc<Mutex<Self::State>>,
-        mut outgoing_receiver: mpsc::Receiver<Self::OutgoingPacket>,
+        mut outgoing_receiver: mpsc::UnboundedReceiver<Self::OutgoingPacket>,
     ) {
         loop {
             // these share state, which means if we were to split them up into two tasks

@@ -35,7 +35,8 @@ impl RoomClient {
         player: Weak<RwLock<Player>>,
         socket: WebSocket,
     ) -> (Self, impl Future<Output = ()>) {
-        let (sender, recv) = mpsc::channel(1000);
+        // unbounded because we send a lot of packets before starting to process the outgoing queue if joining a busy room
+        let (sender, recv) = mpsc::unbounded_channel();
         let state = RoomClientState::new(app_state, room, player, sender);
         let fut = Self::run(socket, state.clone(), recv);
 
@@ -95,7 +96,7 @@ impl Client for RoomClient {
     }
 
     async fn send_packet(&self, packet: OutgoingPacket) -> Result<()> {
-        self.state.lock().await.send_packet(packet).await
+        self.state.lock().await.send_packet(packet)
     }
     async fn broadcast(&self, packet: Self::OutgoingPacket) -> Result<()> {
         self.state.lock().await.broadcast(packet).await

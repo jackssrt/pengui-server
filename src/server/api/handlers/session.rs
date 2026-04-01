@@ -50,7 +50,7 @@ async fn handle_connection(
                 });
         }
     });
-    let (outgoing_sender, outgoing_receiver) = mpsc::channel(100);
+    let (outgoing_sender, outgoing_receiver) = mpsc::unbounded_channel();
     let player = Player::new(state, is_authenticated, uuid, ip, outgoing_sender).await?;
     let session_client = player.with(|player| player.session_client.clone());
     session_client.run(socket, outgoing_receiver).await;

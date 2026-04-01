@@ -45,7 +45,7 @@ impl Client for SessionClient {
         Ok(())
     }
     async fn send_packet(&self, packet: Self::OutgoingPacket) -> Result<()> {
-        self.state.lock().await.send_packet(packet).await
+        self.state.lock().await.send_packet(packet)
     }
     async fn broadcast(&self, packet: Self::OutgoingPacket) -> Result<()> {
         let mut state = self.state.lock().await;
@@ -56,7 +56,7 @@ impl SessionClient {
     pub fn new(
         app_state: &'static AppState,
         player: Weak<RwLock<Player>>,
-        outgoing_sender: mpsc::Sender<OutgoingPacket>,
+        outgoing_sender: mpsc::UnboundedSender<OutgoingPacket>,
     ) -> Self {
         let state = Arc::new(Mutex::new(SessionState::new(
             app_state,
@@ -69,7 +69,7 @@ impl SessionClient {
     pub fn run(
         &self,
         socket: WebSocket,
-        outgoing_receiver: mpsc::Receiver<OutgoingPacket>,
+        outgoing_receiver: mpsc::UnboundedReceiver<OutgoingPacket>,
     ) -> impl std::future::Future<Output = ()> {
         <Self as Client>::run(socket, self.state.clone(), outgoing_receiver)
     }

@@ -6,7 +6,7 @@ use std::{
 
 use anyhow::{Context, Result, anyhow, bail};
 use strum::EnumIs;
-use tokio::sync::{Mutex, mpsc::Sender};
+use tokio::sync::{Mutex, mpsc::UnboundedSender};
 
 use super::packet::{AddPictureData, AnimationCommand, PictureData};
 use crate::{
@@ -47,7 +47,7 @@ pub struct Position {
 
 pub struct RoomClientState {
     state: &'static AppState,
-    outgoing_sender: Sender<OutgoingPacket>,
+    outgoing_sender: UnboundedSender<OutgoingPacket>,
     pub room: Arc<RwLock<Room>>,
     pub player: Weak<RwLock<Player>>,
     pub facing: Direction,
@@ -168,8 +168,8 @@ impl ClientState for RoomClientState {
 
         Ok(())
     }
-    async fn send_packet(&mut self, packet: Self::OutgoingPacket) -> Result<()> {
-        Ok(self.outgoing_sender.send(packet).await?)
+    fn send_packet(&mut self, packet: Self::OutgoingPacket) -> Result<()> {
+        Ok(self.outgoing_sender.send(packet)?)
     }
 }
 
@@ -180,7 +180,7 @@ impl RoomClientState {
         state: &'static AppState,
         room: Arc<RwLock<Room>>,
         player: Weak<RwLock<Player>>,
-        outgoing_sender: Sender<OutgoingPacket>,
+        outgoing_sender: UnboundedSender<OutgoingPacket>,
     ) -> Arc<Mutex<Self>> {
         Arc::new(Mutex::new(Self {
             state,
@@ -429,12 +429,10 @@ impl RoomClientState {
             self.state.config.is_2kki() && switch_id == SwitchId::TIME_TRIAL_2KKI;
         if is_2kki_time_trial {
             if value {
-                self.outgoing_sender
-                    .send(OutgoingPacket::SyncVariable(
-                        VariableId::TIME_TRIAL_ELAPSED_2KKI,
-                        0,
-                    ))
-                    .await?;
+                self.outgoing_sender.send(OutgoingPacket::SyncVariable(
+                    VariableId::TIME_TRIAL_ELAPSED_2KKI,
+                    0,
+                ))?;
             }
             return Ok(());
         }
@@ -569,7 +567,7 @@ impl RoomClientState {
             player.read().id,
             self.room.read().id
         );
-        self.send_room_id_packet().await?;
+        self.send_room_id_packet()?;
         if !self.room.read().is_singleplayer {
             self.broadcast_connect_packet().await?;
             self.send_other_clients_packets().await?;
@@ -631,8 +629,7 @@ impl RoomClientState {
                 is_authenticated: other.is_authenticated,
                 badge: other.badge.clone(),
                 medals: other.medals.clone(),
-            }))
-            .await?;
+            }))?;
             if let Some(other_room_client) = other_room_client {
                 let position = { other_room_client.state.lock().await.position };
                 if let Some(position) = &position {
@@ -640,8 +637,7 @@ impl RoomClientState {
                         player_id: other.id,
                         x: position.x,
                         y: position.y,
-                    }))
-                    .await?;
+                    }))?;
                 }
                 let facing = {
                     let other_room_client = other_room_client.state.lock().await;
@@ -651,16 +647,14 @@ impl RoomClientState {
                     self.send_packet(other.with(|other| OutgoingPacket::ChangeFacingDirection {
                         player_id: other.id,
                         direction: facing,
-                    }))
-                    .await?;
+                    }))?;
                 }
                 let speed = other_room_client.state.lock().await.speed;
                 if let Some(speed) = speed {
                     self.send_packet(other.with(|other| OutgoingPacket::ChangeSpeed {
                         player_id: other.id,
                         speed,
-                    }))
-                    .await?;
+                    }))?;
                 }
                 // ok to clone the name here since we would need to clone it later anyway to send the packet
                 // cloning a None is cheap
@@ -668,16 +662,14 @@ impl RoomClientState {
                     self.send_packet(other.with(|other| OutgoingPacket::Name {
                         player_id: other.id,
                         name,
-                    }))
-                    .await?;
+                    }))?;
                 }
                 if let Some(sprite_index) = { other.read().game_data.sprite_index } {
                     self.send_packet(other.with(|other| OutgoingPacket::ChangeSprite {
                         player_id: other.id,
                         name: other.game_data.sprite.clone(),
                         index: sprite_index,
-                    }))
-                    .await?;
+                    }))?;
                 }
                 let flash = { other_room_client.state.lock().await.flash.clone() };
                 if let Some(flash) = flash {
@@ -686,36 +678,31 @@ impl RoomClientState {
                             player_id: other.read().id,
                             flash: flash.clone(),
                         }
-                    })
-                    .await?;
+                    })?;
                 }
                 let transparency = other_room_client.state.lock().await.transparency;
                 if transparency != 0 {
                     self.send_packet({
                         OutgoingPacket::ChangeTransparency(other.read().id, transparency)
-                    })
-                    .await?;
+                    })?;
                 }
                 let is_hidden = other_room_client.state.lock().await.is_hidden;
                 if is_hidden {
                     self.send_packet(
                         other.with(|other| OutgoingPacket::ChangeSpriteVisibility(other.id, true)),
-                    )
-                    .await?;
+                    )?;
                 }
                 let system = other.read().game_data.system.clone();
                 if let Some(system) = system {
                     self.send_packet(
                         other.with(|other| OutgoingPacket::ChangeSystemGraphic(other.id, system)),
-                    )
-                    .await?;
+                    )?;
                 }
                 if let Some(picture) = &other_room_client.state.lock().await.saved_picture {
                     self.send_packet(OutgoingPacket::AddPicture {
                         picture_data: picture.0.clone(),
                         add_picture_data: picture.1.clone(),
-                    })
-                    .await?;
+                    })?;
                 }
             }
         }
@@ -730,9 +717,8 @@ impl RoomClientState {
         Ok(())
     }
 
-    async fn send_room_id_packet(&mut self) -> Result<()> {
-        self.send_packet(OutgoingPacket::RoomId(self.room.with(|room| room.id)))
-            .await?;
+    fn send_room_id_packet(&mut self) -> Result<()> {
+        self.send_packet(OutgoingPacket::RoomId(self.room.with(|room| room.id)))?;
         Ok(())
     }
 

@@ -7,7 +7,7 @@ use anyhow::{Context, Result, anyhow, bail};
 use serde::Serialize;
 use sqlx::query;
 use strum::EnumIs;
-use tokio::sync::mpsc::Sender;
+use tokio::sync::mpsc::UnboundedSender;
 
 use crate::{
     chat::ids::MessageId,
@@ -19,7 +19,8 @@ use crate::{
     },
     room::{self, client::RoomClient},
     server::state::AppState,
-    session::client::packet::{IncomingPacket, OutgoingPacket}, traits::Random,
+    session::client::packet::{IncomingPacket, OutgoingPacket},
+    traits::Random,
 };
 #[derive(Debug, PartialEq, Eq, Clone, EnumIs)]
 enum ChatChannel {
@@ -32,14 +33,14 @@ enum ChatChannel {
 pub struct SessionState {
     state: &'static AppState,
     player: Weak<RwLock<Player>>,
-    outgoing_sender: Sender<OutgoingPacket>,
+    outgoing_sender: UnboundedSender<OutgoingPacket>,
 }
 
 impl SessionState {
     pub const fn new(
         state: &'static AppState,
         player: Weak<RwLock<Player>>,
-        outgoing_sender: Sender<OutgoingPacket>,
+        outgoing_sender: UnboundedSender<OutgoingPacket>,
     ) -> Self {
         Self {
             state,
@@ -83,8 +84,8 @@ impl ClientState for SessionState {
     async fn broadcast(&mut self, packet: Self::OutgoingPacket) -> Result<()> {
         todo!()
     }
-    async fn send_packet(&mut self, packet: Self::OutgoingPacket) -> Result<()> {
-        Ok(self.outgoing_sender.send(packet).await?)
+    fn send_packet(&mut self, packet: Self::OutgoingPacket) -> Result<()> {
+        Ok(self.outgoing_sender.send(packet)?)
     }
 }
 #[derive(Serialize)]
@@ -155,8 +156,7 @@ impl SessionState {
             });
             let output = serde_json::to_string(&info)?;
             OutgoingPacket::Info(output)
-        })
-        .await?;
+        })?;
         Ok(())
     }
 
@@ -255,8 +255,7 @@ impl SessionState {
                 x: x.unwrap_or(-1),
                 y: y.unwrap_or(-1),
                 message_id: message_id.clone(),
-            }))
-            .await?;
+            }))?;
         } else {
             self.state
                 .players
@@ -336,7 +335,6 @@ impl SessionState {
                                     .lock()
                                     .await
                                     .send_packet(packet)
-                                    .await
                             });
                         });
                 });
@@ -344,8 +342,7 @@ impl SessionState {
         self.send_packet(player.with(|player| OutgoingPacket::SayMap {
             uuid: player.uuid.clone(),
             content,
-        }))
-        .await?;
+        }))?;
         Ok(())
     }
 

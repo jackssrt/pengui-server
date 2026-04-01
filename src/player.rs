@@ -74,7 +74,7 @@ impl Player {
         is_authenticated: bool,
         uuid: PlayerUuid,
         ip: IpAddr,
-        session_outgoing_sender: mpsc::Sender<session::client::packet::OutgoingPacket>,
+        session_outgoing_sender: mpsc::UnboundedSender<session::client::packet::OutgoingPacket>,
     ) -> Result<Arc<RwLock<Self>>> {
         // all this data is fetched here to avoid locking the players and ids_to_uuids mutexes for too long
         let name = PlayerName::fetch_for_player_uuid(state, &uuid).await?;
