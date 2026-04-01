@@ -1,6 +1,7 @@
-use std::{fs::create_dir, os::unix::fs::PermissionsExt, path::PathBuf};
+use std::{fs::create_dir, os::unix::fs::PermissionsExt, path::PathBuf, process, time::Duration};
 
 use anyhow::Result;
+use futures_util::StreamExt;
 use tokio::net::UnixListener;
 
 use crate::{
@@ -42,10 +43,26 @@ async fn setup_router(state: &'static AppState) -> Result<()> {
 
     Ok(())
 }
+fn setup_shutdown_handler(state: &'static AppState) -> Result<()> {
+    tokio::spawn(
+        signal_hook_tokio::Signals::new([signal_hook::consts::SIGTERM])?.for_each(async |_| {
+            state
+                .players
+                .broadcast_system_message("**The server is restarting.**".into())
+                .await;
+
+            tokio::time::sleep(Duration::from_secs(1)).await;
+            process::exit(0);
+        }),
+    );
+    Ok(())
+}
 
 pub async fn start() -> Result<()> {
     tracing::info!("starting");
     let state = Box::leak(Box::new(AppState::setup().await?));
+
+    setup_shutdown_handler(state)?;
 
     init_history(state);
     init_session(state);
