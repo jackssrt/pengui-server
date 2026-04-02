@@ -1,28 +1,21 @@
 use anyhow::{Result, anyhow};
-use serde_repr::{Deserialize_repr, Serialize_repr};
+use serde::{Deserialize, Serialize};
 use strum::{EnumIs, FromRepr};
 
 use super::{ids::PlayerUuid, traits::FetchForPlayerUuid};
 use crate::server::state::AppState;
 
 #[derive(
-    Deserialize_repr,
-    Serialize_repr,
-    FromRepr,
-    PartialEq,
-    Eq,
-    PartialOrd,
-    Ord,
-    Default,
-    Clone,
-    Debug,
-    EnumIs,
+    Serialize, Deserialize, FromRepr, PartialEq, Eq, PartialOrd, Ord, Default, Clone, Debug, EnumIs,
 )]
 #[repr(u8)]
 pub enum Rank {
     #[default]
+    #[serde(rename = "0")]
     User,
+    #[serde(rename = "1")]
     Moderator,
+    #[serde(rename = "2")]
     Developer,
 }
 impl FetchForPlayerUuid for Rank {

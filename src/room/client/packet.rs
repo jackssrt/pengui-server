@@ -3,7 +3,6 @@ use std::sync::Arc;
 use anyhow::Result;
 use bstr::BString;
 use serde::{Deserialize, Serialize};
-use serde_repr::{Deserialize_repr, Serialize_repr};
 
 use crate::{
     client::packet::{de::PacketDeserializer, error::PacketError, ser::PacketSerializer},
@@ -60,10 +59,12 @@ pub struct AddPictureData {
     pub flip_y: bool,
     pub origin: u64,
 }
-#[derive(Serialize_repr, Deserialize_repr, Debug, PartialEq, Eq, PartialOrd, Ord, Clone)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Clone)]
 #[repr(u8)]
 pub enum AnimationCommand {
+    #[serde(rename = "0")]
     Start,
+    #[serde(rename = "1")]
     Stop,
 }
 

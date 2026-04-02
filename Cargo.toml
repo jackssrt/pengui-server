@@ -17,7 +17,6 @@ futures-util = { version = "0.3.32", default-features = false, features = ["sink
 rand = "0.10.0"
 serde = { version = "1.0.228", features = ["serde_derive"] }
 serde_json = "1.0.149"
-serde_repr = "0.1.20"
 sha1 = "0.10.6"
 signal-hook = "0.4.3"
 signal-hook-tokio = { version = "0.4.0", features = ["futures-v0_3"] }
