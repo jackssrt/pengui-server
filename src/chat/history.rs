@@ -78,80 +78,36 @@ pub async fn get_chat_history(
     party_message_limit: u8,
     last_message_id: Option<MessageId>,
 ) -> Result<ChatHistory> {
-    let message_rows = get_message_history_rows(
+    let messages = get_message_history(
         state,
         party_id.clone(),
         global_message_limit,
         party_message_limit,
         last_message_id,
-    );
-    let messages: Vec<_> = message_rows
-        .filter_map(async |x| x.ok())
-        .map(|row| Message {
-            id: row.message_id,
-            uuid: row.uuid,
-            map_id: row.map_id,
-            previous_map_id: row.previous_map_id,
-            previous_locations: row.previous_locations,
-            x: row.x,
-            y: row.y,
-            contents: row.contents,
-            // this is kinda stupid but whatever
-            raw_timestamp: row.timestamp,
-            timestamp: row
-                .timestamp
-                .to_rfc3339_opts(chrono::SecondsFormat::Secs, true),
-            in_party: row.party_value != 0,
-        })
-        .collect()
-        .await;
+    )
+    .await?;
 
     let first_message_timestamp = messages.first().map(|m| m.raw_timestamp);
     let last_message_timestamp = messages.last().map(|m| m.raw_timestamp);
     let timestamps = first_message_timestamp.zip(last_message_timestamp);
-    let player_rows = timestamps.map_or_else(
-        || {
-            Box::pin(futures_util::stream::empty())
-                as Pin<Box<dyn Stream<Item = Result<PlayerRow, sqlx::Error>> + Send>>
-        },
-        |timestamps| get_player_history_rows(state, party_id, timestamps),
-    );
-    let players = player_rows
-        .inspect_err(|e| tracing::error!("{e:?}"))
-        .filter_map(async |x| x.ok())
-        .map(|row| ChatPlayer {
-            name: row.name,
-            uuid: row.uuid,
-            system_name: row.system_name,
-            badge: row.badge,
-            is_authenticated: row.is_authenticated != 0,
-            rank: row.rank,
-            medals: Medals(
-                [
-                    row.medal_count_bronze.unwrap_or_default(),
-                    row.medal_count_silver.unwrap_or_default(),
-                    row.medal_count_gold.unwrap_or_default(),
-                    row.medal_count_platinum.unwrap_or_default(),
-                    row.medal_count_diamond.unwrap_or_default(),
-                ]
-                .into(),
-            ),
-        })
-        .collect()
-        .await;
+    let players = if let Some(timestamps) = timestamps {
+        get_player_history(state, party_id, timestamps).await?
+    } else {
+        Vec::new()
+    };
     Ok(ChatHistory { players, messages })
 }
 
 #[allow(clippy::too_many_lines)]
-fn get_message_history_rows(
+async fn get_message_history(
     state: &'static AppState,
     party_id: Option<PartyId>,
     global_message_limit: u8,
     party_message_limit: u8,
     last_message_id: Option<MessageId>,
-) -> Pin<Box<dyn Stream<Item = Result<MessageHistoryRow, sqlx::Error>> + Send>> {
+) -> Result<Vec<Message>> {
     // im sorry... but at least it's compiler checked? :D
-    match (party_id, last_message_id) {
+    let rows_stream = match (party_id, last_message_id) {
         (None, None) => sqlx::query_as!(MessageHistoryRow, "
         (SELECT cm.msgId as message_id, cm.uuid, cm.mapId as map_id, cm.prevMapId as previous_map_id, cm.prevLocations as previous_locations, cm.x, cm.y, cm.contents, cm.timestamp, 0 as party_value
         FROM chatMessages cm
@@ -263,7 +219,27 @@ fn get_message_history_rows(
         LIMIT ?)
         ORDER BY 9
     ", state.config.game_name, last_message_id.0.as_ref(), global_message_limit, state.config.game_name, last_message_id.0.as_ref(), party_id.0, party_message_limit).fetch(&state.database.pool)
-    }
+    };
+    Ok(rows_stream
+        .filter_map(async |x| x.ok())
+        .map(|row| Message {
+            id: row.message_id,
+            uuid: row.uuid,
+            map_id: row.map_id,
+            previous_map_id: row.previous_map_id,
+            previous_locations: row.previous_locations,
+            x: row.x,
+            y: row.y,
+            contents: row.contents,
+            // this is kinda stupid but whatever
+            raw_timestamp: row.timestamp,
+            timestamp: row
+                .timestamp
+                .to_rfc3339_opts(chrono::SecondsFormat::Secs, true),
+            in_party: row.party_value != 0,
+        })
+        .collect()
+        .await)
 }
 struct PlayerRow {
     uuid: String,
@@ -278,12 +254,12 @@ struct PlayerRow {
     medal_count_platinum: Option<i8>,
     medal_count_diamond: Option<i8>,
 }
-fn get_player_history_rows(
+async fn get_player_history(
     state: &'static AppState,
     party_id: Option<PartyId>,
     (first_timestamp, last_timestamp): (DateTime<Utc>, DateTime<Utc>),
-) -> Pin<Box<dyn Stream<Item = Result<PlayerRow, sqlx::Error>> + Send>> {
-    party_id.map_or_else(
+) -> Result<Vec<ChatPlayer>> {
+    let rows_stream = party_id.map_or_else(
         || {
             sqlx::query_as!(
                 PlayerRow,
@@ -353,7 +329,30 @@ fn get_player_history_rows(
             )
             .fetch(&state.database.pool)
         },
-    )
+    );
+    Ok(rows_stream
+        .inspect_err(|e| tracing::error!("{e:?}"))
+        .filter_map(async |x| x.ok())
+        .map(|row| ChatPlayer {
+            name: row.name,
+            uuid: row.uuid,
+            system_name: row.system_name,
+            badge: row.badge,
+            is_authenticated: row.is_authenticated != 0,
+            rank: row.rank,
+            medals: Medals(
+                [
+                    row.medal_count_bronze.unwrap_or_default(),
+                    row.medal_count_silver.unwrap_or_default(),
+                    row.medal_count_gold.unwrap_or_default(),
+                    row.medal_count_platinum.unwrap_or_default(),
+                    row.medal_count_diamond.unwrap_or_default(),
+                ]
+                .into(),
+            ),
+        })
+        .collect()
+        .await)
 }
 
 pub async fn delete_old_chat_messages(database: &Database) -> Result<()> {
