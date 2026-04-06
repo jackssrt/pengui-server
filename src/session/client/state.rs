@@ -286,15 +286,15 @@ impl SessionState {
         let uuid = player.with(|player| player.uuid.clone());
         query!(
             "INSERT INTO chatMessages (msgId, game, uuid, mapId, prevMapId, prevLocations, x, y, contents) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
-            message_id.as_ref(),
+            &*message_id,
             self.state.config.game_name,
-            uuid.0.as_ref(),
+            &*uuid.0,
             map_id,
             previous_map_id,
-            previous_locations.as_ref(),
+            &*previous_locations,
             x.unwrap_or(-1),
             y.unwrap_or(-1),
-            content.as_ref(),
+            &*content,
         ).execute(&self.state.database.pool).await?;
         // TODO webhook
         Ok(())

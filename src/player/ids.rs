@@ -1,13 +1,12 @@
-use std::{fmt::Display, net::IpAddr, sync::Arc};
+use std::{fmt::Display, net::IpAddr, ops::Deref, sync::Arc};
 
 use anyhow::Result;
-use derive_more::Deref;
 use rand::distr::{Alphanumeric, SampleString};
 use serde::Serialize;
 
 use crate::{server::state::AppState, traits::Random};
 
-#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Hash, Debug, Deref)]
+#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Hash, Debug)]
 #[repr(transparent)]
 pub struct PlayerUuid(pub Arc<str>);
 impl PlayerUuid {
@@ -66,6 +65,13 @@ impl Serialize for PlayerUuid {
         S: serde::Serializer,
     {
         AsRef::<str>::as_ref(&self.0).serialize(serializer)
+    }
+}
+impl Deref for PlayerUuid {
+    type Target = Arc<str>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
     }
 }
 #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Hash, Serialize, Copy, Debug, Default)]

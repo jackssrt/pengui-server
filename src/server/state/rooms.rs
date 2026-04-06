@@ -1,16 +1,13 @@
 use std::{
-    collections::BTreeMap,
-    sync::{
+    collections::BTreeMap, ops::Deref, sync::{
         Arc,
         nonpoison::{Mutex, RwLock},
-    },
+    }
 };
-
-use derive_more::Deref;
 
 use crate::room::{Room, ids::MapId};
 
-#[derive(Default, Deref)]
+#[derive(Default)]
 pub struct Rooms {
     pub rooms: Mutex<BTreeMap<MapId, Arc<RwLock<Room>>>>,
 }
@@ -22,5 +19,13 @@ impl Rooms {
         rooms
             .entry(id)
             .or_insert_with(move || Arc::new(RwLock::new(Room::new(id))))
+    }
+}
+
+impl Deref for Rooms {
+    type Target = Mutex<BTreeMap<MapId, Arc<RwLock<Room>>>>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.rooms
     }
 }
