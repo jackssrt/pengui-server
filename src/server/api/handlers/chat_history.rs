@@ -100,7 +100,7 @@ pub async fn handle_clear_chat_history(
     if let Some(last_global_message_id) = validate_message_id(last_global_message_id)? {
         sqlx::query!(
             "UPDATE playerGameData SET lastGlobalMsgId = ? WHERE uuid = ? AND game = ?",
-            last_global_message_id.0.as_ref(),
+            last_global_message_id.0,
             player_uuid.0.as_ref(),
             state.config.game_name,
         )
@@ -110,7 +110,7 @@ pub async fn handle_clear_chat_history(
     if let Some(last_party_message_id) = validate_message_id(last_party_message_id)? {
         sqlx::query!(
             "UPDATE playerGameData SET lastPartyMsgId = ? WHERE uuid = ? AND game = ?",
-            last_party_message_id.0.as_ref(),
+            last_party_message_id.0,
             player_uuid.0.as_ref(),
             state.config.game_name,
         )

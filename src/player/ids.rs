@@ -1,4 +1,4 @@
-use std::{fmt::Display, net::IpAddr, ops::Deref, sync::Arc};
+use std::{fmt::Display, net::IpAddr, sync::Arc};
 
 use anyhow::Result;
 use rand::distr::{Alphanumeric, SampleString};
@@ -35,7 +35,7 @@ impl PlayerUuid {
             sqlx::query!(
                 "INSERT INTO players (ip, uuid, banned) VALUES (?, ?, ?)",
                 ip,
-                uuid.0.as_ref(),
+                uuid.0,
                 false
             )
             .execute(&state.database.pool)
@@ -65,13 +65,6 @@ impl Serialize for PlayerUuid {
         S: serde::Serializer,
     {
         AsRef::<str>::as_ref(&self.0).serialize(serializer)
-    }
-}
-impl Deref for PlayerUuid {
-    type Target = Arc<str>;
-
-    fn deref(&self) -> &Self::Target {
-        &self.0
     }
 }
 #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Hash, Serialize, Copy, Debug, Default)]

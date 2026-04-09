@@ -1,5 +1,5 @@
 use std::{
-    collections::BTreeMap, ops::Deref, sync::{
+    collections::BTreeMap, sync::{
         Arc,
         nonpoison::{Mutex, RwLock},
     }
@@ -19,13 +19,5 @@ impl Rooms {
         rooms
             .entry(id)
             .or_insert_with(move || Arc::new(RwLock::new(Room::new(id))))
-    }
-}
-
-impl Deref for Rooms {
-    type Target = Mutex<BTreeMap<MapId, Arc<RwLock<Room>>>>;
-
-    fn deref(&self) -> &Self::Target {
-        &self.rooms
     }
 }

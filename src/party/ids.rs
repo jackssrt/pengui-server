@@ -17,7 +17,7 @@ impl MaybeFetchForPlayerUuid for PartyId {
     ) -> Result<Option<Self>> {
         Ok(sqlx::query!(
             "SELECT partyId FROM partyMembers where uuid = ?",
-            &*player_uuid.0
+            player_uuid.0
         )
         .fetch_optional(&state.database.pool)
         .await?

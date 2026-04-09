@@ -26,7 +26,7 @@ impl FetchForPlayerUuid for ModerationStatus {
     async fn fetch_for_player_uuid(state: &AppState, uuid: &PlayerUuid) -> Result<Self> {
         Ok(sqlx::query!(
             "SELECT muted, banned FROM players WHERE uuid = ?",
-            uuid.0.as_ref()
+            uuid.0,
         )
         .fetch_optional(&state.database.pool)
         .await?

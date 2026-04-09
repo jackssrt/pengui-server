@@ -135,7 +135,7 @@ impl Player {
     ) -> Result<()> {
         sqlx::query!(
             "INSERT INTO playerGameData (uuid, game, online) VALUES (?, ?, 1) ON DUPLICATE KEY UPDATE online = 1, timestampLastActive = UTC_TIMESTAMP()",
-            uuid.0.as_ref(),
+            uuid.0,
             state.config.game_name
         ).execute(&state.database.pool).await?;
         Ok(())

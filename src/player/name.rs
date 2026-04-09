@@ -17,7 +17,7 @@ impl MaybeFetchForPlayerUuid for PlayerName {
     ) -> Result<Option<Self>> {
         Ok(sqlx::query!(
             "SELECT user FROM accounts WHERE uuid = ?",
-            player_uuid.0.as_ref()
+            player_uuid.0,
         )
         .fetch_optional(&state.database.pool)
         .await?

@@ -211,11 +211,10 @@ impl RoomClientState {
             bail!("invalid room id")
         };
         // add client to room
-        {
-            let rooms = &mut *self.state.rooms.lock();
+        let rooms = self.state.rooms.rooms.with_mut(|rooms| {
             let room = Rooms::get_by_id(rooms, room_id);
             self.room = room.clone();
-        }
+        });
         self.join_room().await?;
         Ok(())
     }

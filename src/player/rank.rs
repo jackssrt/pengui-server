@@ -21,7 +21,7 @@ pub enum Rank {
 impl FetchForPlayerUuid for Rank {
     async fn fetch_for_player_uuid(state: &AppState, uuid: &PlayerUuid) -> Result<Self> {
         Ok(
-            sqlx::query!("SELECT `rank` FROM players WHERE uuid = ?", uuid.as_ref())
+            sqlx::query!("SELECT `rank` FROM players WHERE uuid = ?", uuid.0)
                 .fetch_optional(&state.database.pool)
                 .await?
                 .map(|x| {
