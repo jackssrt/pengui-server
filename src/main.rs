@@ -10,7 +10,6 @@
 #![feature(sync_nonpoison)]
 #![feature(nonpoison_rwlock)]
 #![feature(nonpoison_mutex)]
-#![feature(duration_constructors)]
 #![feature(stmt_expr_attributes)]
 #![feature(lock_value_accessors)]
 #![deny(clippy::panic)]

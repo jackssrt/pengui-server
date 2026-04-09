@@ -1,8 +1,6 @@
-use std::pin::Pin;
-
 use anyhow::Result;
 use chrono::{DateTime, Utc};
-use futures_util::{Stream, StreamExt, TryStreamExt};
+use futures_util::{StreamExt, TryStreamExt};
 use serde::Serialize;
 
 use crate::{
