@@ -1,0 +1,31 @@
+{
+  "db_name": "MySQL",
+  "query": "SELECT targetUuid FROM playerBlocks where uuid = ?",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "targetUuid",
+        "type_info": {
+          "type": "String",
+          "flags": "NOT_NULL | PRIMARY_KEY | MULTIPLE_KEY | NO_DEFAULT_VALUE",
+          "collation": 224,
+          "max_size": 64
+        },
+        "origin": {
+          "Table": {
+            "table": "ynoserver.playerBlocks",
+            "name": "targetUuid"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "6c8404450a6e46c6fe3ef3909fd6868ff5c88fcfd47c7baacafe5a9ac427ae57"
+}

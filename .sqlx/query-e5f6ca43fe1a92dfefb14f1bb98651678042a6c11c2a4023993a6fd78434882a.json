@@ -1,0 +1,99 @@
+{
+  "db_name": "MySQL",
+  "query": "SELECT medalCountBronze, medalCountSilver, medalCountGold, medalCountPlatinum, medalCountDiamond FROM playerGameData WHERE uuid = ?",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "medalCountBronze",
+        "type_info": {
+          "type": "Tiny",
+          "flags": "",
+          "collation": 63,
+          "max_size": 100
+        },
+        "origin": {
+          "Table": {
+            "table": "ynoserver.playerGameData",
+            "name": "medalCountBronze"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "medalCountSilver",
+        "type_info": {
+          "type": "Tiny",
+          "flags": "",
+          "collation": 63,
+          "max_size": 100
+        },
+        "origin": {
+          "Table": {
+            "table": "ynoserver.playerGameData",
+            "name": "medalCountSilver"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "medalCountGold",
+        "type_info": {
+          "type": "Tiny",
+          "flags": "",
+          "collation": 63,
+          "max_size": 100
+        },
+        "origin": {
+          "Table": {
+            "table": "ynoserver.playerGameData",
+            "name": "medalCountGold"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "medalCountPlatinum",
+        "type_info": {
+          "type": "Tiny",
+          "flags": "",
+          "collation": 63,
+          "max_size": 100
+        },
+        "origin": {
+          "Table": {
+            "table": "ynoserver.playerGameData",
+            "name": "medalCountPlatinum"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "medalCountDiamond",
+        "type_info": {
+          "type": "Tiny",
+          "flags": "",
+          "collation": 63,
+          "max_size": 100
+        },
+        "origin": {
+          "Table": {
+            "table": "ynoserver.playerGameData",
+            "name": "medalCountDiamond"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      true,
+      true,
+      true,
+      true,
+      true
+    ]
+  },
+  "hash": "e5f6ca43fe1a92dfefb14f1bb98651678042a6c11c2a4023993a6fd78434882a"
+}

@@ -1,0 +1,186 @@
+{
+  "db_name": "MySQL",
+  "query": "SELECT DISTINCT\n                pd.uuid,\n                COALESCE(a.user, pgd.name) as name,\n                pd.rank,\n                CASE WHEN a.user IS NULL THEN 0 ELSE 1 END as is_authenticated,\n                COALESCE(a.badge, '') as badge,\n                pgd.systemName as system_name,\n                pgd.medalCountBronze as medal_count_bronze,\n                pgd.medalCountSilver as medal_count_silver,\n                pgd.medalCountGold as medal_count_gold,\n                pgd.medalCountPlatinum as medal_count_platinum,\n                pgd.medalCountDiamond as medal_count_diamond\n            FROM players pd\n                JOIN playerGameData pgd ON pgd.uuid = pd.uuid\n                LEFT JOIN accounts a ON a.uuid = pd.uuid\n            WHERE\n                pgd.game = ?\n                AND EXISTS (\n                    SELECT cm.uuid FROM chatMessages cm\n                    WHERE cm.uuid = pd.uuid\n                        AND cm.game = pgd.game\n                        AND cm.timestamp\n                        BETWEEN ? AND ?\n                        AND cm.partyId IS NULL\n                        OR cm.partyId = ?\n                )",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "uuid",
+        "type_info": {
+          "type": "String",
+          "flags": "NOT_NULL | PRIMARY_KEY | NO_DEFAULT_VALUE",
+          "collation": 224,
+          "max_size": 64
+        },
+        "origin": {
+          "Table": {
+            "table": "ynoserver.players",
+            "name": "uuid"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "name",
+        "type_info": {
+          "type": "VarString",
+          "flags": "NOT_NULL",
+          "collation": 224,
+          "max_size": 48
+        },
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 2,
+        "name": "rank",
+        "type_info": {
+          "type": "Long",
+          "flags": "NOT_NULL",
+          "collation": 63,
+          "max_size": 11
+        },
+        "origin": {
+          "Table": {
+            "table": "ynoserver.players",
+            "name": "rank"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "is_authenticated",
+        "type_info": {
+          "type": "Long",
+          "flags": "NOT_NULL | BINARY",
+          "collation": 63,
+          "max_size": 1
+        },
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 4,
+        "name": "badge",
+        "type_info": {
+          "type": "VarString",
+          "flags": "NOT_NULL",
+          "collation": 224,
+          "max_size": 128
+        },
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 5,
+        "name": "system_name",
+        "type_info": {
+          "type": "VarString",
+          "flags": "NOT_NULL",
+          "collation": 224,
+          "max_size": 128
+        },
+        "origin": {
+          "Table": {
+            "table": "ynoserver.playerGameData",
+            "name": "systemName"
+          }
+        }
+      },
+      {
+        "ordinal": 6,
+        "name": "medal_count_bronze",
+        "type_info": {
+          "type": "Tiny",
+          "flags": "",
+          "collation": 63,
+          "max_size": 100
+        },
+        "origin": {
+          "Table": {
+            "table": "ynoserver.playerGameData",
+            "name": "medalCountBronze"
+          }
+        }
+      },
+      {
+        "ordinal": 7,
+        "name": "medal_count_silver",
+        "type_info": {
+          "type": "Tiny",
+          "flags": "",
+          "collation": 63,
+          "max_size": 100
+        },
+        "origin": {
+          "Table": {
+            "table": "ynoserver.playerGameData",
+            "name": "medalCountSilver"
+          }
+        }
+      },
+      {
+        "ordinal": 8,
+        "name": "medal_count_gold",
+        "type_info": {
+          "type": "Tiny",
+          "flags": "",
+          "collation": 63,
+          "max_size": 100
+        },
+        "origin": {
+          "Table": {
+            "table": "ynoserver.playerGameData",
+            "name": "medalCountGold"
+          }
+        }
+      },
+      {
+        "ordinal": 9,
+        "name": "medal_count_platinum",
+        "type_info": {
+          "type": "Tiny",
+          "flags": "",
+          "collation": 63,
+          "max_size": 100
+        },
+        "origin": {
+          "Table": {
+            "table": "ynoserver.playerGameData",
+            "name": "medalCountPlatinum"
+          }
+        }
+      },
+      {
+        "ordinal": 10,
+        "name": "medal_count_diamond",
+        "type_info": {
+          "type": "Tiny",
+          "flags": "",
+          "collation": 63,
+          "max_size": 100
+        },
+        "origin": {
+          "Table": {
+            "table": "ynoserver.playerGameData",
+            "name": "medalCountDiamond"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Right": 4
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      true,
+      true,
+      true,
+      true,
+      true
+    ]
+  },
+  "hash": "b5b150da2390cef473a8f6e1e1b546e0b772fe4515c58e07dcbcabecf1f3c04f"
+}

@@ -1,0 +1,31 @@
+{
+  "db_name": "MySQL",
+  "query": "SELECT partyId FROM partyMembers where uuid = ?",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "partyId",
+        "type_info": {
+          "type": "Long",
+          "flags": "NOT_NULL | PRIMARY_KEY | NO_DEFAULT_VALUE",
+          "collation": 63,
+          "max_size": 11
+        },
+        "origin": {
+          "Table": {
+            "table": "ynoserver.partyMembers",
+            "name": "partyId"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "b68f970725eeb67ffe4d3638c8498a2d79337175cdc862a83614550f5ca85381"
+}

@@ -1,0 +1,48 @@
+{
+  "db_name": "MySQL",
+  "query": "SELECT badgeSlotRows, badgeSlotCols FROM accounts WHERE uuid = ?",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "badgeSlotRows",
+        "type_info": {
+          "type": "Long",
+          "flags": "NOT_NULL",
+          "collation": 63,
+          "max_size": 11
+        },
+        "origin": {
+          "Table": {
+            "table": "ynoserver.accounts",
+            "name": "badgeSlotRows"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "badgeSlotCols",
+        "type_info": {
+          "type": "Long",
+          "flags": "NOT_NULL",
+          "collation": 63,
+          "max_size": 11
+        },
+        "origin": {
+          "Table": {
+            "table": "ynoserver.accounts",
+            "name": "badgeSlotCols"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false,
+      false
+    ]
+  },
+  "hash": "8eb2026cdb2e141bd1d04b2c100e905968493c87e5b1a3ea7834d7a8fa9c5d3f"
+}

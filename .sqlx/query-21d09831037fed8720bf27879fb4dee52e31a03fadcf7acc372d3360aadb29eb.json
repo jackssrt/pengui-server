@@ -1,0 +1,134 @@
+{
+  "db_name": "MySQL",
+  "query": "\n        (SELECT cm.msgId as message_id, cm.uuid, cm.mapId as map_id, cm.prevMapId as previous_map_id, cm.prevLocations as previous_locations, cm.x, cm.y, cm.contents, cm.timestamp, 0 as party_value\n        FROM chatMessages cm\n            JOIN players pd ON pd.uuid = cm.uuid\n            JOIN playerGameData pgd ON pgd.uuid = pd.uuid AND pgd.game = cm.game\n        WHERE\n            cm.game = ? \n            AND pd.banned = 0\n            AND cm.timestamp > (SELECT cm2.timestamp FROM chatMessages cm2 WHERE cm2.msgId = ?)\n            AND cm.partyId IS NULL\n            AND (\n                pgd.lastGlobalMsgId IS NULL\n                OR cm.timestamp > (\n                    SELECT cmg.timestamp FROM chatMessages cmg WHERE cmg.msgId = pgd.lastGlobalMsgId\n                )\n            )\n        ORDER BY 9 DESC\n        LIMIT ?)\n        UNION\n        (SELECT cm.msgId as message_id, cm.uuid, cm.mapId as map_id, cm.prevMapId as previous_map_id, cm.prevLocations as previous_locations, cm.x, cm.y, cm.contents, cm.timestamp, 0 as party_value\n        FROM chatMessages cm\n            JOIN players pd ON pd.uuid = cm.uuid\n            JOIN playerGameData pgd ON pgd.uuid = pd.uuid AND pgd.game = cm.game\n        WHERE\n            cm.game = ? \n            AND pd.banned = 0\n            AND cm.timestamp > (SELECT cm2.timestamp FROM chatMessages cm2 WHERE cm2.msgId = ?)\n            AND cm.partyId = ?\n            AND (\n                pgd.lastPartyMsgId IS NULL\n                OR cm.timestamp > (\n                    SELECT cmp.timestamp FROM chatMessages cmp WHERE cmp.msgId = pgd.lastPartyMsgId\n                )\n            )\n        ORDER BY 9 DESC\n        LIMIT ?)\n        ORDER BY 9\n    ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "message_id",
+        "type_info": {
+          "type": "String",
+          "flags": "NOT_NULL",
+          "collation": 224,
+          "max_size": 48
+        },
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 1,
+        "name": "uuid",
+        "type_info": {
+          "type": "String",
+          "flags": "NOT_NULL",
+          "collation": 224,
+          "max_size": 64
+        },
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 2,
+        "name": "map_id",
+        "type_info": {
+          "type": "String",
+          "flags": "",
+          "collation": 224,
+          "max_size": 16
+        },
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 3,
+        "name": "previous_map_id",
+        "type_info": {
+          "type": "String",
+          "flags": "",
+          "collation": 224,
+          "max_size": 16
+        },
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 4,
+        "name": "previous_locations",
+        "type_info": {
+          "type": "VarString",
+          "flags": "",
+          "collation": 224,
+          "max_size": 2048
+        },
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 5,
+        "name": "x",
+        "type_info": {
+          "type": "Long",
+          "flags": "NOT_NULL",
+          "collation": 63,
+          "max_size": 11
+        },
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 6,
+        "name": "y",
+        "type_info": {
+          "type": "Long",
+          "flags": "NOT_NULL",
+          "collation": 63,
+          "max_size": 11
+        },
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 7,
+        "name": "contents",
+        "type_info": {
+          "type": "VarString",
+          "flags": "NOT_NULL",
+          "collation": 224,
+          "max_size": 600
+        },
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 8,
+        "name": "timestamp",
+        "type_info": {
+          "type": "Timestamp",
+          "flags": "NOT_NULL | UNSIGNED | BINARY",
+          "collation": 63,
+          "max_size": 19
+        },
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 9,
+        "name": "party_value",
+        "type_info": {
+          "type": "Long",
+          "flags": "NOT_NULL",
+          "collation": 63,
+          "max_size": 1
+        },
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Right": 7
+    },
+    "nullable": [
+      false,
+      false,
+      true,
+      true,
+      true,
+      false,
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "21d09831037fed8720bf27879fb4dee52e31a03fadcf7acc372d3360aadb29eb"
+}

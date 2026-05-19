@@ -1,0 +1,31 @@
+{
+  "db_name": "MySQL",
+  "query": "SELECT badge FROM accounts WHERE uuid = ?",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "badge",
+        "type_info": {
+          "type": "VarString",
+          "flags": "NOT_NULL",
+          "collation": 224,
+          "max_size": 128
+        },
+        "origin": {
+          "Table": {
+            "table": "ynoserver.accounts",
+            "name": "badge"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "63ff7fefbed3708800a9d294d0a73211222f38a0022613ce188cee63c2d8ed6c"
+}

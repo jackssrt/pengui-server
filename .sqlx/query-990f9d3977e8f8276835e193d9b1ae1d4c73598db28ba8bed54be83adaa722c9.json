@@ -1,0 +1,31 @@
+{
+  "db_name": "MySQL",
+  "query": "SELECT user FROM accounts WHERE uuid = ?",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "user",
+        "type_info": {
+          "type": "VarString",
+          "flags": "NOT_NULL | UNIQUE_KEY | NO_DEFAULT_VALUE",
+          "collation": 224,
+          "max_size": 48
+        },
+        "origin": {
+          "Table": {
+            "table": "ynoserver.accounts",
+            "name": "user"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "990f9d3977e8f8276835e193d9b1ae1d4c73598db28ba8bed54be83adaa722c9"
+}

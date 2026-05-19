@@ -1,0 +1,12 @@
+{
+  "db_name": "MySQL",
+  "query": "UPDATE playerMinigameScores SET score = ?, timestampCompleted = CURRENT_TIMESTAMP() WHERE uuid = ? AND game = ? AND minigameId = ?",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 4
+    },
+    "nullable": []
+  },
+  "hash": "b811e0b0aa6a8807e51d6178a9c4c477a2fbd9e325a2253ee6e35240345cc794"
+}

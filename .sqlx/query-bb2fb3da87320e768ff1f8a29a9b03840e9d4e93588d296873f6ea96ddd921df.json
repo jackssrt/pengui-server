@@ -1,0 +1,12 @@
+{
+  "db_name": "MySQL",
+  "query": "UPDATE playerGameData SET lastGlobalMsgId = ? WHERE uuid = ? AND game = ?",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 3
+    },
+    "nullable": []
+  },
+  "hash": "bb2fb3da87320e768ff1f8a29a9b03840e9d4e93588d296873f6ea96ddd921df"
+}

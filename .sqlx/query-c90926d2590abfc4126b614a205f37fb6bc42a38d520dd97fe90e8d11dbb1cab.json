@@ -1,0 +1,31 @@
+{
+  "db_name": "MySQL",
+  "query": "SELECT score FROM playerMinigameScores WHERE uuid = ? AND minigameId = ?",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "score",
+        "type_info": {
+          "type": "Long",
+          "flags": "NOT_NULL | NO_DEFAULT_VALUE",
+          "collation": 63,
+          "max_size": 11
+        },
+        "origin": {
+          "Table": {
+            "table": "ynoserver.playerMinigameScores",
+            "name": "score"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Right": 2
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "c90926d2590abfc4126b614a205f37fb6bc42a38d520dd97fe90e8d11dbb1cab"
+}

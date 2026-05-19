@@ -1,0 +1,12 @@
+{
+  "db_name": "MySQL",
+  "query": "UPDATE playerGameData SET online = 0 WHERE game = ? and online = 1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": []
+  },
+  "hash": "8edddd693bb7dce9578f6c93ddff2965e6a09efbc59220ba86c65ba57411e125"
+}

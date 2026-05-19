@@ -1,0 +1,12 @@
+{
+  "db_name": "MySQL",
+  "query": "INSERT INTO players (ip, uuid, banned) VALUES (?, ?, ?)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 3
+    },
+    "nullable": []
+  },
+  "hash": "76bfb8a94015c52efcbe79ec6b11b32b2908bdd28292ae190fe4cd902dbd31ff"
+}

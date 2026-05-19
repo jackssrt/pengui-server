@@ -1,0 +1,31 @@
+{
+  "db_name": "MySQL",
+  "query": "SELECT screenshotLimit FROM accounts WHERE uuid = ?",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "screenshotLimit",
+        "type_info": {
+          "type": "Long",
+          "flags": "NOT_NULL",
+          "collation": 63,
+          "max_size": 11
+        },
+        "origin": {
+          "Table": {
+            "table": "ynoserver.accounts",
+            "name": "screenshotLimit"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "ed264a085b8e4d6ea7158dd1dc385c5dc384ed1c073459984e7da21135e075b7"
+}

@@ -1,0 +1,31 @@
+{
+  "db_name": "MySQL",
+  "query": "SELECT uuid FROM players WHERE ip = ?",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "uuid",
+        "type_info": {
+          "type": "String",
+          "flags": "NOT_NULL | PRIMARY_KEY | NO_DEFAULT_VALUE",
+          "collation": 224,
+          "max_size": 64
+        },
+        "origin": {
+          "Table": {
+            "table": "ynoserver.players",
+            "name": "uuid"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "4f88dec1096385d5ce163c0ce75bcc1f8c29df81ca3b0ea4e7d38c70c8a52efa"
+}

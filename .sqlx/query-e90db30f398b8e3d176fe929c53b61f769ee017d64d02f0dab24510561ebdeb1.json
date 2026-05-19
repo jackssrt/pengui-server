@@ -1,0 +1,48 @@
+{
+  "db_name": "MySQL",
+  "query": "SELECT muted, banned FROM players WHERE uuid = ?",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "muted",
+        "type_info": {
+          "type": "Tiny",
+          "flags": "NOT_NULL",
+          "collation": 63,
+          "max_size": 1
+        },
+        "origin": {
+          "Table": {
+            "table": "ynoserver.players",
+            "name": "muted"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "banned",
+        "type_info": {
+          "type": "Tiny",
+          "flags": "NOT_NULL | NO_DEFAULT_VALUE",
+          "collation": 63,
+          "max_size": 1
+        },
+        "origin": {
+          "Table": {
+            "table": "ynoserver.players",
+            "name": "banned"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false,
+      false
+    ]
+  },
+  "hash": "e90db30f398b8e3d176fe929c53b61f769ee017d64d02f0dab24510561ebdeb1"
+}
