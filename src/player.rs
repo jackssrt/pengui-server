@@ -88,19 +88,21 @@ impl Player {
         let game_data = GameData::default();
         let privacy_settings = PrivacySettings::default();
         {
-            // get the mutable lock here to prevent a time-of-check to time-of-use race condition where
-            // someone could connect a ton of clients from the same ip
-            let mut players = state.players.players.lock();
-
             // the limit is 4 per ip
-            if players.values().filter(|x| x.read().ip == ip).count() >= 4 {
+            if state
+                .players
+                .players
+                .iter()
+                .filter(|x| x.read().ip == ip)
+                .count()
+                >= 4
+            {
                 bail!("too many connections from ip");
             }
 
             let mut free_ids = state.players.free_ids.lock();
-            let id = Players::get_next_free_id(&players, &mut free_ids);
-            Ok(Players::insert_new(
-                &mut players,
+            let id = state.players.get_next_free_id(&mut free_ids);
+            Ok(state.players.insert_new(
                 &free_ids,
                 Arc::new_cyclic(|weak| {
                     RwLock::new(Self {

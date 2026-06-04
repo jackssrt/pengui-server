@@ -12,6 +12,7 @@ axum-extra = { version = "0.12.5", features = ["typed-header"] }
 bstr = "1.12.1"
 chrono = { version = "0.4.44", features = ["serde"] }
 clap = { version = "4.5.60", features = ["derive"] }
+dashmap = "6.2.1"
 futures-util = { version = "0.3.32", default-features = false, features = ["sink", "std"] }
 rand = "0.10.0"
 serde = { version = "1.0.228", features = ["serde_derive"] }

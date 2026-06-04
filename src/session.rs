@@ -10,7 +10,7 @@ pub fn init_session(state: &'static AppState) {
         let mut last_player_count = None;
         loop {
             interval.tick().await;
-            let player_count = { state.players.players.lock().len() };
+            let player_count = { state.players.players.len() };
 
             // don't send the same player count twice
             if let Some(last_player_count) = last_player_count

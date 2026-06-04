@@ -1,10 +1,12 @@
 use std::{
-    collections::{HashMap, VecDeque},
+    collections::VecDeque,
     sync::{
         Arc,
         nonpoison::{Mutex, RwLock},
     },
 };
+
+use dashmap::DashMap;
 
 use crate::{
     chat::ids::MessageId,
@@ -21,42 +23,38 @@ use crate::{
 };
 #[derive(Default)]
 pub struct Players {
-    pub players: Mutex<HashMap<PlayerUuid, Arc<RwLock<Player>>>>,
+    pub players: DashMap<PlayerUuid, Arc<RwLock<Player>>>,
     pub free_ids: Mutex<VecDeque<PlayerId>>,
 }
 impl Players {
-    pub fn get_next_free_id(
-        players: &HashMap<PlayerUuid, Arc<RwLock<Player>>>,
-        free_ids: &mut VecDeque<PlayerId>,
-    ) -> PlayerId {
+    pub fn get_next_free_id(&self, free_ids: &mut VecDeque<PlayerId>) -> PlayerId {
         free_ids
             .pop_front()
             // allocate a new id
-            .unwrap_or(PlayerId(players.len()))
+            .unwrap_or(PlayerId(self.players.len()))
     }
     pub fn insert_new(
-        players: &mut HashMap<PlayerUuid, Arc<RwLock<Player>>>,
+        &self,
         free_ids: &VecDeque<PlayerId>,
         player: Arc<RwLock<Player>>,
     ) -> Arc<RwLock<Player>> {
-        players.insert(player.read().uuid.clone(), player.clone());
+        self.players
+            .insert(player.read().uuid.clone(), player.clone());
         player
     }
     pub fn remove_player(&self, player: Arc<RwLock<Player>>) {
         let (uuid, id) = player.with(|players| (player.read().uuid.clone(), player.read().id.0));
         tracing::debug!("removing player {} with id {}", uuid, id);
-        self.players.lock().remove(&uuid);
+        self.players.remove(&uuid);
         self.free_ids.lock().push_back(PlayerId(id));
         drop(player);
     }
     pub async fn get_by_uuid(&self, uuid: &PlayerUuid) -> Option<Arc<RwLock<Player>>> {
-        let players = self.players.lock();
-        players.get(uuid).cloned()
+        self.players.get(uuid).map(|x| x.value().clone())
     }
     pub async fn broadcast_session_packet(&self, packet: session::client::packet::OutgoingPacket) {
         self.players
-            .lock()
-            .values()
+            .iter()
             .map(|player| player.read().session_client.clone())
             .for_each(|session_client| {
                 let packet = packet.clone();
