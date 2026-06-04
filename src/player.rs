@@ -1,5 +1,4 @@
 use std::{
-    collections::HashSet,
     net::IpAddr,
     sync::{Arc, nonpoison::RwLock},
 };
@@ -11,7 +10,6 @@ use crate::{
     party::ids::PartyId,
     player::{
         badge::BadgeName,
-        blocked_users::BlockedUsers,
         game_data::GameData,
         ids::{PlayerId, PlayerUuid},
         medal::Medals,
@@ -19,18 +17,17 @@ use crate::{
         name::PlayerName,
         privacy_settings::PrivacySettings,
         rank::Rank,
+        relations::Relations,
         traits::{FetchForPlayerUuid, MaybeFetchForPlayerUuid},
     },
     room::client::RoomClient,
-    server::state::{AppState, players::Players},
+    server::state::AppState,
     session::{self, client::SessionClient},
 };
 
 pub mod badge;
 pub mod badge_slots;
-pub mod blocked_users;
 pub mod disconnected;
-pub mod friends;
 pub mod game_data;
 pub mod ids;
 pub mod locations;
@@ -39,6 +36,7 @@ pub mod moderation_status;
 pub mod name;
 pub mod privacy_settings;
 pub mod rank;
+pub mod relations;
 pub mod screenshot_limit;
 pub mod traits;
 
@@ -60,9 +58,8 @@ pub struct Player {
     pub party_id: Option<PartyId>,
     pub game_data: GameData,
     pub is_authenticated: bool,
+    pub relations: Relations,
 
-    pub online_friends: HashSet<PlayerUuid>,
-    pub blocked_users: BlockedUsers,
     // sockets
     pub room_client: Option<Arc<RoomClient>>,
     pub session_client: Arc<SessionClient>,
@@ -83,8 +80,7 @@ impl Player {
         let moderation_status = ModerationStatus::fetch_for_player_uuid(state, &uuid).await?;
         let medals = Medals::fetch_for_player_uuid(state, &uuid).await?;
         let party_id = PartyId::fetch_for_player_uuid(state, &uuid).await?;
-        let blocked_users = BlockedUsers::fetch_for_player_uuid(state, &uuid).await?;
-        let online_friends = HashSet::default();
+        let relations = Relations::fetch_for_player_uuid(state, &uuid).await?;
         let game_data = GameData::default();
         let privacy_settings = PrivacySettings::default();
         {
@@ -121,8 +117,7 @@ impl Player {
                             session_outgoing_sender,
                         )),
                         party_id,
-                        blocked_users,
-                        online_friends,
+                        relations,
                         privacy_settings,
                         game_data,
                         is_authenticated,
@@ -149,11 +144,12 @@ impl Player {
             ..
         } = self.privacy_settings.or(&other.privacy_settings);
         let is_different_party = other.party_id.is_none() || self.party_id != other.party_id;
-        let are_not_friends = !self.online_friends.contains(&other.uuid);
+        let are_not_friends = !self.relations.online_friends.contains(&other.uuid);
         (private) && ((singleplayer) || is_different_party && are_not_friends)
     }
     pub fn is_blocked_with(&self, other: &Self) -> bool {
-        self.blocked_users.contains(&other.uuid) || other.blocked_users.contains(&other.uuid)
+        self.relations.blocked_users.contains(&other.uuid)
+            || other.relations.blocked_users.contains(&other.uuid)
     }
     pub const fn is_unnamed_player_hidden_by(&self, other: &Self) -> bool {
         self.name.is_none() && other.privacy_settings.hide_unnamed_players

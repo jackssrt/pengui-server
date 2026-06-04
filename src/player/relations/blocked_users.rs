@@ -3,8 +3,10 @@ use std::collections::HashSet;
 use anyhow::Result;
 use futures_util::{StreamExt, TryStreamExt};
 
-use super::{ids::PlayerUuid, traits::FetchForPlayerUuid};
-use crate::server::state::AppState;
+use crate::{
+    player::{ids::PlayerUuid, traits::FetchForPlayerUuid},
+    server::state::AppState,
+};
 
 pub struct BlockedUsers(pub HashSet<PlayerUuid>);
 impl BlockedUsers {
