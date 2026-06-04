@@ -50,7 +50,7 @@ impl Config {
     pub fn is_main_server(&self) -> bool {
         self.is_2kki()
     }
-    pub async fn parse(path: impl AsRef<Path>) -> Result<Self> {
+    pub fn parse(path: impl AsRef<Path>) -> Result<Self> {
         let file = std::fs::File::open(path.as_ref())?;
         let config = yaml_serde::from_reader(&file)?;
 

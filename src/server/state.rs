@@ -33,11 +33,7 @@ impl AppState {
         let args = Args::parse();
 
         // Config
-        let config = Arc::new(
-            Config::parse(&args.config)
-                .await
-                .context("failed to read config")?,
-        );
+        let config = Arc::new(Config::parse(&args.config).context("failed to read config")?);
 
         // Logging
         let (file_logger, _guard) = tracing_appender::non_blocking(

@@ -56,7 +56,7 @@ impl ClientState for SessionState {
     async fn process_packet(&mut self, packet: Self::IncomingPacket) -> Result<()> {
         match packet {
             IncomingPacket::SetName(name) => self.handle_name(name).await,
-            IncomingPacket::SetPrivateMode(mode) => self.handle_set_private_mode(mode).await,
+            IncomingPacket::SetPrivateMode(mode) => self.handle_set_private_mode(mode),
             IncomingPacket::GetInfo => self.handle_info().await,
             IncomingPacket::SayMap(content) => self.handle_say(ChatChannel::Map, content).await,
             IncomingPacket::SayGlobal(content) => {
@@ -102,13 +102,13 @@ struct PlayerInfo {
 }
 
 impl SessionState {
-    async fn get_player(&self) -> Result<Arc<RwLock<Player>>> {
+    fn get_player(&self) -> Result<Arc<RwLock<Player>>> {
         self.player
             .upgrade()
             .ok_or_else(|| anyhow!("invalid player"))
     }
     async fn handle_name(&self, name: Arc<str>) -> Result<()> {
-        let player = self.get_player().await?;
+        let player = self.get_player()?;
         if let Some((client, packet)) = player.with_mut(|player| {
             let character_limit = if player.is_authenticated { 12 } else { 10 };
             (!name.is_empty()
@@ -131,8 +131,8 @@ impl SessionState {
         }
         Ok(())
     }
-    async fn handle_set_private_mode(&self, mode: u8) -> Result<()> {
-        self.get_player().await?.with_mut(|player| {
+    fn handle_set_private_mode(&self, mode: u8) -> Result<()> {
+        self.get_player()?.with_mut(|player| {
             player.privacy_settings.singleplayer = mode == 2;
             player.privacy_settings.private = player.privacy_settings.singleplayer || mode == 1;
         });
@@ -140,7 +140,7 @@ impl SessionState {
     }
 
     async fn handle_info(&mut self) -> Result<()> {
-        let player = self.get_player().await?;
+        let player = self.get_player()?;
         let uuid = player.read().uuid.clone();
         let badge_slots = BadgeSlots::fetch_for_player_uuid(self.state, &uuid).await?;
         let screenshot_limit = ScreenshotLimit::fetch_for_player_uuid(self.state, &uuid).await?;
@@ -169,7 +169,7 @@ impl SessionState {
             bail!("invalid message");
         }
         // TODO chat filtering
-        let player = self.get_player().await?;
+        let player = self.get_player()?;
         let (name, system) = player.with(|player| {
             if channel.is_map() && player.room_client.is_none() {
                 bail!("room client does not exist, are you connected to the room ws?")
@@ -351,7 +351,7 @@ impl SessionState {
         previous_map_id: u16,
         previous_locations: Arc<str>,
     ) -> Result<()> {
-        let player = self.get_player().await?;
+        let player = self.get_player()?;
         let room_client = player
             .with(|player| player.room_client.clone())
             .context("room client does not exist")?;
@@ -368,8 +368,9 @@ impl SessionState {
         Ok(())
     }
 
+    #[allow(clippy::unused_async_trait_impl)]
     async fn handle_location_color(&self, location_name: Arc<str>) -> Result<()> {
-        let _ = self.get_room_client().await?;
+        let _ = self.get_room_client()?;
         // TODO events
         // self.send_packet(if let Some(location_color) = event.game_location_colors.get(&location_name) {
         //     OutgoingPacket::LocationColor { key: location_color.key.clone(), value: location_color.value.clone() }
@@ -380,8 +381,8 @@ impl SessionState {
         Ok(())
     }
 
-    async fn get_room_client(&self) -> Result<Arc<RoomClient>> {
-        let player = self.get_player().await?;
+    fn get_room_client(&self) -> Result<Arc<RoomClient>> {
+        let player = self.get_player()?;
         let room_client = player
             .with(|player| player.room_client.clone())
             .context("room client does not exist")?;

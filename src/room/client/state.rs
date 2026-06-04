@@ -117,9 +117,12 @@ impl ClientState for RoomClientState {
                 self.handle_picture(picture_data, ExtraPictureData::Move { duration })
                     .await
             }
-            IncomingPacket::RemovePicture(id) => self.handle_remove_picture(id).await,
+            IncomingPacket::RemovePicture(id) => {
+                self.handle_remove_picture(id);
+                Ok(())
+            }
             IncomingPacket::SyncSwitch { switch_id, value } => {
-                self.handle_sync_switch(switch_id, value).await
+                self.handle_sync_switch(switch_id, value)
             }
             IncomingPacket::SyncVariable { variable_id, value } => {
                 self.handle_sync_variable(variable_id, value)
@@ -134,6 +137,7 @@ impl ClientState for RoomClientState {
         }?;
         Ok(())
     }
+    #[allow(clippy::unused_async_trait_impl)]
     async fn broadcast(&mut self, packet: OutgoingPacket) -> Result<()> {
         let player = self.get_player()?;
         let player = player.read();
@@ -211,7 +215,7 @@ impl RoomClientState {
             bail!("invalid room id")
         };
         // add client to room
-        let rooms = self.state.rooms.rooms.with_mut(|rooms| {
+        self.state.rooms.rooms.with_mut(|rooms| {
             let room = Rooms::get_by_id(rooms, room_id);
             self.room = room.clone();
         });
@@ -409,7 +413,7 @@ impl RoomClientState {
         Ok(())
     }
 
-    async fn handle_sync_switch(&mut self, switch_id: u16, value: bool) -> Result<()> {
+    fn handle_sync_switch(&mut self, switch_id: u16, value: bool) -> Result<()> {
         let player = self.get_player()?;
         let switch_id = SwitchId(switch_id);
 
@@ -517,10 +521,9 @@ impl RoomClientState {
         Ok(())
     }
 
-    async fn handle_remove_picture(&mut self, id: u16) -> Result<()> {
+    fn handle_remove_picture(&mut self, id: u16) {
         self.saved_picture
             .take_if(|saved_picture| saved_picture.0.id == id);
-        Ok(())
     }
 
     async fn handle_animation_command(&mut self, command: AnimationCommand) -> Result<()> {

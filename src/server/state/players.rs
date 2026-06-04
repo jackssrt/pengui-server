@@ -49,7 +49,7 @@ impl Players {
         self.free_ids.lock().push_back(PlayerId(id));
         drop(player);
     }
-    pub async fn get_by_uuid(&self, uuid: &PlayerUuid) -> Option<Arc<RwLock<Player>>> {
+    pub fn get_by_uuid(&self, uuid: &PlayerUuid) -> Option<Arc<RwLock<Player>>> {
         self.players.get(uuid).map(|x| x.value().clone())
     }
     pub async fn broadcast_session_packet(&self, packet: session::client::packet::OutgoingPacket) {

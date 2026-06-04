@@ -58,7 +58,6 @@ pub async fn handle_room(
     let player = state
         .players
         .get_by_uuid(&uuid)
-        .await
         .ok_or_else(|| anyhow!("invalid player, are you connected to the session ws?"))?;
     Ok((ws.protocols(["binary"]).on_upgrade(async move |ws| {
         let _ = handle_connection(state, ws, room, player, is_authenticated).await;
