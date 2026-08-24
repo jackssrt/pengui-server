@@ -9,10 +9,13 @@ use axum::{
 use serde::Deserialize;
 
 use crate::{
-    chat::{history::get_chat_history, ids::MessageId}, party::ids::PartyId, player::traits::MaybeFetchForPlayerUuid, server::{
+    chat::{history::get_chat_history, ids::MessageId},
+    party::ids::PartyId,
+    player::traits::MaybeFetchForPlayerUuid,
+    server::{
         api::extractors::authentication::OptionalHeaderAuthentication, error::AppError,
         state::AppState,
-    }
+    },
 };
 #[inline]
 const fn global_message_limit_default() -> u8 {

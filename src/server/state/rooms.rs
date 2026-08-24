@@ -1,8 +1,9 @@
 use std::{
-    collections::BTreeMap, sync::{
+    collections::BTreeMap,
+    sync::{
         Arc,
         nonpoison::{Mutex, RwLock},
-    }
+    },
 };
 
 use crate::room::{Room, ids::MapId};
