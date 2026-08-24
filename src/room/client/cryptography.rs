@@ -24,7 +24,7 @@ impl Cryptography {
         let hash = sha.finalize();
         (AsRef::<[u8]>::as_ref(&hash))[..4] == data[..4]
     }
-    fn verify_counter(&mut self, data: &[u8]) -> bool {
+    const fn verify_counter(&mut self, data: &[u8]) -> bool {
         let client_counter = u32::from_be_bytes([data[4], data[5], data[6], data[7]]);
         // ... the client uses uninitialized memory as the starting value of the counter
         // so we have to just accept any number higher than the counter we already have
