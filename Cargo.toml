@@ -3,6 +3,16 @@ name = "pengui-server"
 version = "0.1.0"
 edition = "2024"
 
+[profile.dev]
+panic = "abort"
+strip = true
+
+[profile.release]
+opt-level = 3
+lto = true
+strip = true
+panic = "abort"
+
 [dependencies]
 anyhow = "1.0.102"
 async-compression = { version = "0.4.40", features = ["tokio", "zstd"] }
