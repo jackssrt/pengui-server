@@ -11,13 +11,13 @@ use crate::{server::state::AppState, traits::Random};
 pub struct PlayerUuid(pub Arc<str>);
 impl PlayerUuid {
     pub async fn fetch_for_token(state: &AppState, token: &str) -> Result<Option<Self>> {
-        let query = sqlx::query!(
+        let query = sqlx::query_scalar!(
             "SELECT uuid FROM playerSessions WHERE sessionId = ? AND NOW() < expiration",
             token
         )
         .fetch_optional(&state.database.pool)
         .await?;
-        Ok(query.map(|x| Self(x.uuid.into())))
+        Ok(query.map(Into::into).map(Self))
     }
     pub async fn fetch_for_ip(state: &AppState, ip: &IpAddr) -> Result<Self> {
         // ip is already a unique key
@@ -25,11 +25,11 @@ impl PlayerUuid {
         // and the fact that they also have code that allows
         // up to 4 connections from the same ip??
         // maybe the schema i found is just too old
-        let query = sqlx::query!("SELECT uuid FROM players WHERE ip = ?", ip)
+        let uuid = sqlx::query_scalar!("SELECT uuid FROM players WHERE ip = ?", ip)
             .fetch_optional(&state.database.pool)
             .await?;
-        Ok(if let Some(query) = query {
-            Self(query.uuid.into())
+        Ok(if let Some(uuid) = uuid {
+            Self(uuid.into())
         } else {
             let uuid = Self::random();
             sqlx::query!(

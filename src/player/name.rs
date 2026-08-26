@@ -16,10 +16,11 @@ impl MaybeFetchForPlayerUuid for PlayerName {
         player_uuid: &PlayerUuid,
     ) -> Result<Option<Self>> {
         Ok(
-            sqlx::query!("SELECT user FROM accounts WHERE uuid = ?", player_uuid.0,)
+            sqlx::query_scalar!("SELECT user FROM accounts WHERE uuid = ?", player_uuid.0,)
                 .fetch_optional(&state.database.pool)
                 .await?
-                .map(|x| Self(x.user.into())),
+                .map(Into::into)
+                .map(Self),
         )
     }
 }

@@ -17,12 +17,12 @@ impl BlockedUsers {
 impl FetchForPlayerUuid for BlockedUsers {
     async fn fetch_for_player_uuid(state: &AppState, player_uuid: &PlayerUuid) -> Result<Self> {
         Ok(Self(
-            sqlx::query!(
+            sqlx::query_scalar!(
                 "SELECT targetUuid FROM playerBlocks where uuid = ?",
                 player_uuid.0
             )
             .fetch(&state.database.pool)
-            .map(|x| x.map(|x| PlayerUuid(x.targetUuid.into())))
+            .map(|x| x.map(Into::into).map(PlayerUuid))
             .try_collect()
             .await?,
         ))

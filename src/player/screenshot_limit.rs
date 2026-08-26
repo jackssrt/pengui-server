@@ -9,13 +9,13 @@ use crate::server::state::AppState;
 pub struct ScreenshotLimit(i32);
 impl FetchForPlayerUuid for ScreenshotLimit {
     async fn fetch_for_player_uuid(state: &AppState, player_uuid: &PlayerUuid) -> Result<Self> {
-        Ok(sqlx::query!(
+        Ok(sqlx::query_scalar!(
             "SELECT screenshotLimit FROM accounts WHERE uuid = ?",
             player_uuid.0
         )
         .fetch_optional(&state.database.pool)
         .await?
-        .map(|record| Self(record.screenshotLimit))
+        .map(Self)
         .unwrap_or_default())
     }
 }

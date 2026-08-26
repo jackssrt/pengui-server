@@ -21,11 +21,11 @@ pub enum Rank {
 impl FetchForPlayerUuid for Rank {
     async fn fetch_for_player_uuid(state: &AppState, uuid: &PlayerUuid) -> Result<Self> {
         Ok(
-            sqlx::query!("SELECT `rank` FROM players WHERE uuid = ?", uuid.0)
+            sqlx::query_scalar!("SELECT `rank` FROM players WHERE uuid = ?", uuid.0)
                 .fetch_optional(&state.database.pool)
                 .await?
-                .map(|x| {
-                    Self::from_repr(x.rank.try_into()?)
+                .map(|rank| {
+                    Self::from_repr(rank.try_into()?)
                         .ok_or_else(|| anyhow!("rank value in db out of range"))
                 })
                 .transpose()?

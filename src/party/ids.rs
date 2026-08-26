@@ -15,12 +15,12 @@ impl MaybeFetchForPlayerUuid for PartyId {
         state: &AppState,
         player_uuid: &PlayerUuid,
     ) -> Result<Option<Self>> {
-        Ok(sqlx::query!(
+        Ok(sqlx::query_scalar!(
             "SELECT partyId FROM partyMembers where uuid = ?",
             player_uuid.0
         )
         .fetch_optional(&state.database.pool)
         .await?
-        .map(|x| Self(x.partyId)))
+        .map(Self))
     }
 }

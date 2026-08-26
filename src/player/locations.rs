@@ -16,10 +16,10 @@ impl FetchForPlayerUuid for Locations {
         state: &AppState,
         player_uuid: &PlayerUuid,
     ) -> anyhow::Result<Self> {
-        Ok(Self(sqlx::query!(
+        Ok(Self(sqlx::query_scalar!(
             "SELECT gl.id FROM playerGameLocations pgl JOIN gameLocations gl ON gl.id = pgl.locationId AND gl.game = ? WHERE pgl.uuid = ?",
             &state.config.game_name,
             player_uuid.0,
-        ).fetch(&state.database.pool).map(|result| result.map(|record| LocationId(record.id))).try_collect().await?))
+        ).fetch(&state.database.pool).map(|result| result.map(LocationId)).try_collect().await?))
     }
 }
