@@ -1,6 +1,6 @@
 use std::{fs::create_dir, os::unix::fs::PermissionsExt, path::PathBuf, process, time::Duration};
 
-use anyhow::Result;
+use anyhow::{Context as _, Result};
 use futures_util::StreamExt;
 use tokio::net::UnixListener;
 
@@ -21,11 +21,17 @@ pub fn get_listener(config: &Config) -> Result<UnixListener> {
     // because we defined it
     // throw away the Err, because it's most likely just because it already exists
     #[allow(clippy::unwrap_used)]
-    let _ = create_dir(socket_path.parent().unwrap());
+    if let Err(reason) = create_dir(socket_path.parent().unwrap())
+        && reason.kind() != std::io::ErrorKind::AlreadyExists
+    {
+        return Err(reason).context("failed to create unix socket parent directory");
+    }
 
     // delete the old socket
-    if std::fs::exists(&socket_path)? {
-        std::fs::remove_file(&socket_path)?;
+    if let Err(reason) = std::fs::remove_file(&socket_path)
+        && reason.kind() != std::io::ErrorKind::NotFound
+    {
+        return Err(reason).context("failed to delete unix socket");
     }
 
     // bind the listener
